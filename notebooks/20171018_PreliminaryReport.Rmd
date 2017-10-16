@@ -1,12 +1,13 @@
 ---
 title: "HIK Project Day -- Linnaruum: Day 1 (11.10.2017)"
 subtitle: "Preliminary Research Report"
+author: "Luis P. Prieto"
 abstract: "This document describes the research questions and data gathered for the first session of the HIK project days with activities outside the classroom (dubbed 'Linnaruum'), that took place on the 11 October 2017. It also explores what kinds of questions can be answered with such data, so that the whole process can be improved for future iterations of the event."
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = F)
+knitr::opts_chunk$set(echo = F, warning = F, message = F, error = F)
 
 library(ggplot2)
 library(data.table)
@@ -17,14 +18,23 @@ library(factoextra)
 library(GGally)
 
 source("../src/preprocessMultimodalTracker.R")
+
 ```
 
-# Preprocessing
-
-## Read/preprocess the multimodal tracker data
+(brief intro: this is a collaboration between HIK, didactics, several days - repetitions, overall topic and characteristics)
 
 
-```{r multi-preprocess}
+# Research questions
+
+
+# Methodology
+
+## Data gathering
+
+
+```{r preprocess}
+
+####################### MULTIMODAL TRACKER DATA
 # The data file(s)
 mm_datafiles <- list.files("../data/raw/20171011/", pattern = "*multimodal-tracker*")
 #filename <- "./multimodal-tracker-1507639281494.txt"
@@ -64,38 +74,32 @@ for(file in mm_datafiles){
    }
 }
 
-print("Geolocation data")
-print(xtabs(~group,data=geolocation))
-for(i in 1:6){
-  print(paste("Group",i))
-  times <- geolocation[geolocation$group==i,"timestamp"]
-  print(paste("We have samples from ",as.POSIXct(min(times)/1000, origin = "1970-01-01"),"to",as.POSIXct(max(times)/1000, origin = "1970-01-01")))
-}
-
-print("Beacon data")
-print(xtabs(~group,data=beacons))
-for(i in 1:6){
-  print(paste("Group",i))
-  times <- beacons[beacons$group==i,"timestamp"]
-  print(paste("We have samples from ",as.POSIXct(min(times)/1000, origin = "1970-01-01"),"to",as.POSIXct(max(times)/1000, origin = "1970-01-01")))
-}
-
-print("Acc data")
-print(xtabs(~group,data=acceleration))
-for(i in 1:6){
-  print(paste("Group",i))
-  times <- acceleration[acceleration$group==i,"timestamp"]
-  print(paste("We have samples from ",as.POSIXct(min(times)/1000, origin = "1970-01-01"),"to",as.POSIXct(max(times)/1000, origin = "1970-01-01")))
-}
-
-
-
-```
-
-## Read the observer data
+# print("Geolocation data")
+# print(xtabs(~group,data=geolocation))
+# for(i in 1:6){
+#   print(paste("Group",i))
+#   times <- geolocation[geolocation$group==i,"timestamp"]
+#   print(paste("We have samples from ",as.POSIXct(min(times)/1000, origin = "1970-01-01"),"to",as.POSIXct(max(times)/1000, origin = "1970-01-01")))
+# }
+# 
+# print("Beacon data")
+# print(xtabs(~group,data=beacons))
+# for(i in 1:6){
+#   print(paste("Group",i))
+#   times <- beacons[beacons$group==i,"timestamp"]
+#   print(paste("We have samples from ",as.POSIXct(min(times)/1000, origin = "1970-01-01"),"to",as.POSIXct(max(times)/1000, origin = "1970-01-01")))
+# }
+# 
+# print("Acc data")
+# print(xtabs(~group,data=acceleration))
+# for(i in 1:6){
+#   print(paste("Group",i))
+#   times <- acceleration[acceleration$group==i,"timestamp"]
+#   print(paste("We have samples from ",as.POSIXct(min(times)/1000, origin = "1970-01-01"),"to",as.POSIXct(max(times)/1000, origin = "1970-01-01")))
+# }
 
 
-```{r obs-preprocess}
+########################## OBSERVER DATA
 # The data file(s)
 obs_datafile <- "../data/raw/20171011/Observer sheet - Linnaruum (Responses).xlsx"
 
@@ -115,7 +119,8 @@ student_obs$external <- as.numeric(grepl(pattern = "external", x = student_obs$v
 names(student_obs)[[3]]<-"student"
 student_obs <- student_obs[,c(1:3,5:9)]
 
-summary(student_obs)
+
+# summary(student_obs)
 
 
 # Group view of the observations
@@ -135,17 +140,14 @@ group_obs <- group_obs[order(group_obs$group,group_obs$timestamp),]
 
 group_obs$group <- as.factor(group_obs$group)
 group_obs$comment <- as.character(group_obs$comment)
-summary(group_obs)
-names(group_obs)
+# summary(group_obs)
+# names(group_obs)
 
-ag <- aggregate(cbind(disengaged,looking,talking,resources,external)~group, data=group_obs, FUN = mean)
-ag
-```
+# ag <- aggregate(cbind(disengaged,looking,talking,resources,external)~group, data=group_obs, FUN = mean)
+# ag
 
 
-## Read the student feedback data
-
-```{r fb-preprocess}
+############### STUDENT FEEDBACK
 # Read and clean the individual activity feedback data
 fb1_datafile <- "../data/raw/20171011/Avastame Kadriorgu - Individual activity feedback (Responses).xlsx"
 
@@ -163,228 +165,22 @@ names(fb2_data) <- c("timestamp", "group", "student", "strategies", "roles", "ov
 fb2_data$student.id <- paste(fb2_data$group,fb2_data$student)
 ```
 
+## Data analysis
 
-# Exploring the data
+# The events of 11.10.2017
 
-## Draw some plots - student feedback
+## What data is available?
 
-```{r fb-plots1}
-# How many responses we got?
-table(fb1_data$group,fb1_data$activity)
-table(fb1_data$student.id,fb1_data$activity)
+## What kind of questions can we answer?
 
-plotdata <- fb1_data[,2:10]
-melted <- melt(plotdata, id.vars = c(1:3,9), measure.vars = 4:8)
 
-melted_cont <- melted[melted$variable=="contribution",]
-melted_rest <- melted[melted$variable!="contribution",]
+# How can we improve?
 
-# Overall distribution of contributions, satisfaction, difficulty, preparedness
-ggplot(melted_cont, aes(x=value))+geom_density()+theme_minimal()+xlim(0,100)
-ggplot(melted_rest, aes(x=value))+geom_density()+theme_minimal()+ facet_grid(~ variable)+xlim(0,9)
+## The learning scenario
 
-# difficulty, preparedness and satisfaction per activity
-ggplot(melted_rest, aes(x=variable, y=value))+geom_boxplot(aes(fill=activity))+theme_minimal()+ylim(0,9)
 
-# relation between difficulty, preparedness and satisfaction (flow constructs)
-ggplot(fb1_data, aes(x=difficulty, y=satisfaction, col=activity))+geom_jitter(size=4, alpha=0.3)+geom_smooth(se=F)
-ggpairs(fb1_data[,6:9],
-        lower = list(continuous = wrap("points", alpha = 0.1)))+theme_minimal()
+## The research process
 
-```
-```{r fb-plots2}
+Other data to be gathered
 
-table(fb2_data$group)
-ggplot(fb2_data, aes(x=overall.satisfaction))+geom_density()+theme_minimal()+xlim(0,9)
-
-```
-
-## Draw some plots - group observations
-
-Plot group variables over time...
-
-```{r group-obs, echo=FALSE}
-
-# ggplot(accdata, aes(x=timestamp, colour="x")) + 
-#   geom_line(aes(y = x, colour = "x"))+ 
-#   geom_line(aes(y = y, colour = "y"))+ 
-#   geom_line(aes(y = z, colour = "z"))+theme_minimal()+
-#   ggtitle("Accelerometer X, Y, Z over time")
-
-#melted <- melt(group_obs, id=1:2, measure=4:7)
-
-ggplot(group_obs, aes(x=timestamp, y=talking, col=as.factor(group)))+geom_smooth(se = F)+theme_minimal()
-
-
-```
-
-Let's do PCA
-
-
-```{r pca}
-
-pca.group=PCA(group_obs[,4:8], scale.unit = TRUE, graph = TRUE)
-
-
-group_obs$engagement <- pca.group$ind$coord[,1]
-group_obs$focusint <- pca.group$ind$coord[,2]
-
-pca.group=PCA(group_obs[,4:8], scale.unit = TRUE, graph = TRUE)
-
-
-```
-
-
-```{r pca2}
-
-
-fviz_eig(pca.group, addlabels = TRUE)
-
-var <- get_pca_var(pca.group)
-
-fviz_pca_ind(pca.group,
-             geom.ind = "point", # show points only (nbut not "text")
-             col.ind = group_obs$group, # color by groups
-             addEllipses = TRUE, # Concentration ellipses
-             legend.title = "Groups", ellipse.type = "confidence", repel = T
-             )
-
-```
-
-
-
-## Draw some plots - student 
-
-Plot group variables over time...
-
-```{r student-obs, echo=FALSE}
-
-# ggplot(accdata, aes(x=timestamp, colour="x")) + 
-#   geom_line(aes(y = x, colour = "x"))+ 
-#   geom_line(aes(y = y, colour = "y"))+ 
-#   geom_line(aes(y = z, colour = "z"))+theme_minimal()+
-#   ggtitle("Accelerometer X, Y, Z over time")
-
-#melted <- melt(group_obs, id=1:2, measure=4:7)
-student_obs$student.id <- paste(student_obs$group,student_obs$student)
-ggplot(student_obs, aes(x=timestamp, y=talking, col=as.factor(student.id)))+geom_smooth(se = F)+theme_minimal()
-
-
-```
-
-Let's do PCA
-
-
-```{r pca.stu}
-
-pca.student=PCA(student_obs[,4:8], scale.unit = TRUE, graph = TRUE)
-
-# Interpretation of dimensions: engagement, external focus
-student_obs$engagement <- pca.student$ind$coord[,1]
-student_obs$focusext <- pca.student$ind$coord[,2]
-
-pca.student=PCA(student_obs[,4:8], scale.unit = TRUE, graph = TRUE)
-
-```
-
-
-```{r pca2.stu}
-
-
-fviz_eig(pca.student, addlabels = TRUE)
-
-var <- get_pca_var(pca.student)
-
-print(var$cor)
-
-fviz_pca_ind(pca.student,
-             geom.ind = "point", # show points only (nbut not "text")
-             col.ind = student_obs$student.id, # color by groups
-             addEllipses = TRUE, # Concentration ellipses
-             legend.title = "Students", ellipse.type = "confidence", repel = T
-             )
-
-ag.stu <- aggregate(cbind(engagement,focusext)~student.id, data=student_obs, FUN=mean)
-ag.stu
-
-ggplot(student_obs, aes(x=engagement, col=group))+geom_density()+theme_minimal()
-
-ggplot(student_obs, aes(x=timestamp, y=engagement))+geom_smooth(span = 0.2)+theme_minimal()#+geom_point(alpha=0.1,size=4)
-
-ggplot(student_obs, aes(x=timestamp, y=focusext))+geom_smooth(span = 0.2)+theme_minimal()#+geom_point(alpha=0.1,size=4)
-
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Total movement over time (calculated as the difference in all 3 axes to the previous value)
-
-```{r movement, echo=FALSE}
-totalacc <- data.frame()
-for(group in unique(acceleration$group)){
-  accdata <- acceleration[acceleration$group==group,]
-  accdata$diff <- sqrt((accdata$x-shift(accdata$x))^2+
-                   (accdata$y-shift(accdata$y))^2+
-                   (accdata$z-shift(accdata$z))^2)
-  if(nrow(totalacc)==0) totalacc <- accdata
-  else totalacc <- rbind(totalacc, accdata)
-}
-
-
-
-ggplot(totalacc, aes(x=timestamp, y=diff, col=as.factor(group)))+geom_smooth(se=F)+theme_minimal()+
-  ggtitle("Total movement over time")
-
-
-```
-
-Distance (aprox.) to the beacons over time
-
-```{r beacons, echo=FALSE}
-
-ggplot(beacons, aes(x=timestamp, y=rssi, colour=minor))+
-   geom_line()+theme_minimal()+facet_wrap(~as.factor(group))
-   ggtitle("Beacon signal strength")
-
-
-```
-
-And some geoposition data... (no useful data yet)
-
-```{r geo, echo=FALSE}
-
-# #ggplot(geodata, aes(x=timestamp, y=latitude))+
-# #  geom_line(aes(y = latitude, colour = "latitude"))+ 
-# #  geom_line(aes(y = longitude, colour = "longitude"))+ 
-# #  theme_minimal()+
-# #  ggtitle("Lat/Long over time")
-# 
-# ggplot(geodata, aes(x=longitude, y=latitude))+
-#   geom_line()+ 
-#   theme_minimal()+
-#   ggtitle("Lat/Long over time")
-
-
-```
+Other analyses to be run
