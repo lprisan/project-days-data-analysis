@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = F, warning = F, message = F, error = F, digits=3)
 
 inline_hook <- function(x) {
   if (is.numeric(x)) {
-    format(x, digits = 3)
+    format(x, digits = 2)
   } else x
 }
 knitr::knit_hooks$set(inline = inline_hook)
@@ -26,6 +26,9 @@ library(FactoMineR)
 library(factoextra)
 library(GGally)
 library(timevis)
+library(ineq)
+library(knitr)
+#library(timeline)
 
 source("../src/preprocessMultimodalTracker.R")
 
@@ -155,6 +158,7 @@ student_obs$resources <- as.numeric(grepl(pattern = "technology", x = student_ob
 student_obs$external <- as.numeric(grepl(pattern = "external", x = student_obs$value, fixed = TRUE))
 names(student_obs)[[3]]<-"student"
 student_obs <- student_obs[,c(1:3,5:9)]
+student_obs$student.id <- paste(student_obs$group,student_obs$student)
 
 
 # summary(student_obs)
@@ -268,7 +272,7 @@ Even more interesting to polish the activity design, we can look at **how the st
 
 ```{r activity-fb, fig.height=4, fig.width=8}
 # # difficulty, preparedness and satisfaction per activity
-ggplot(melted_rest, aes(x=variable, y=value))+geom_boxplot(aes(fill=activity))+theme_minimal()+scale_y_continuous(breaks=seq(0,9,1), limits=c(0,9))
+ggplot(melted_rest, aes(x=variable, y=value, fill=activity))+geom_boxplot()+theme_minimal()+scale_y_continuous(breaks=seq(0,9,1), limits=c(0,9))
 # Are differences significant?
 
 # summary(lm(difficulty~activity, data=fb1_data)) # Activity II seems to be considerably easier
@@ -290,15 +294,7 @@ ggplot(melted_rest, aes(x=variable, y=value))+geom_boxplot(aes(fill=activity))+t
 #         lower = list(continuous = wrap("points", alpha = 0.1)))+theme_minimal()
 ```
 
-As we can see, there are small differences among the values of the different activities, but most of these differences are not statistically significant. The only difference that seems more significant is the fact that activity II (finding a house and doing a selfie) was perceived as considerably easier by students (t=`r summary(lm(difficulty~activity, data=fb1_data))$coefficients['activityII','t value']`, p=`r summary(lm(difficulty~activity, data=fb1_data))$coefficients['activityII','Pr(>|t|)']`). This might explain why students were also most satisfied with that activity. Indeed, we can explore further this relationship between difficulty of the activity and student satisfaction with that activity:
-
-```{r difficulty-satisfaction}
-ggplot(fb1_data, aes(x=satisfaction, y=difficulty, col=activity))+geom_jitter(size=3, width=0.3, height=0.3, alpha=0.5)+theme_minimal()+scale_y_continuous(breaks=seq(0,9,1), limits=c(0,9))+scale_x_continuous(breaks=seq(0,9,1), limits=c(0,9))+geom_smooth(method="lm",se=F)
-
-
-```
-
-As we can see, for all activities the trend is that, the more difficult the activities are, students are less satisfied. This is, on the one hand, logical (nobody likes to do difficult things). On the other hand, the learning design should strive towards challenging tasks (as they can lead to more learning) that are nevertheless satisfying to complete.
+As we can see, there are small differences among the values of the different activities, but most of these differences are not statistically significant. The only difference that seems more significant is the fact that activity II (finding a house and doing a selfie) was perceived as considerably easier by students (t=`r summary(lm(difficulty~activity, data=fb1_data))$coefficients['activityII','t value']`, p=`r summary(lm(difficulty~activity, data=fb1_data))$coefficients['activityII','Pr(>|t|)']`). This might explain why students were also most satisfied with that activity. 
 
 Finally, by looking at the responses students provided about **suggestions for future activities** (see [this spreadsheet](https://docs.google.com/spreadsheets/d/1R4EKJ1KYiuMqjT41p72XP4Lbsv_5JrDGfWRhQ_CSRNk/edit#gid=52226403), column G), we see that things like orienteering/scavenger hunts/photohunts were most often mentioned, as well as more technology-oriented suggestions like videos about Kadriorg's past or an app/platform/web with geolocated information about the neighborhood's past (similar to the idea of SmartZoos). There were mentions to "better composed instructions" as well :).
 
@@ -314,6 +310,7 @@ timevis(data = data.frame(
   group = as.numeric(fb1_data$group)),
   groups = data.frame(id = sort(unique(as.numeric(fb1_data$group))), content = sort(levels(fb1_data$group)))
  )
+
 
 ```
 
@@ -346,7 +343,110 @@ Also related to this, it is worth noting that observers noticed the main teacher
 ## Collaborative problem solving (RQ2)
 
 ### Engagement in the groupwork
-* How engaged each student and each group was, and how this engagement evolved over time?
+
+How engaged was each of the students in the work (and in what way, e.g., talking vs. manipulating resources or getting external help), as noted by the observers? We can see the "engagement profile" of each student, like:
+
+```{r engagement-stu}
+# Engagement profile of a student
+ag_stu <- aggregate(cbind(disengaged,looking,talking,resources,external)~student.id, data=student_obs, FUN="mean")
+meltedstu <- melt(ag_stu)
+ggplot(meltedstu, aes(x=as.factor(student.id),y=value))+geom_bar(aes(fill = variable), position = "dodge", stat="identity")+coord_flip()+theme_minimal()
+
+```
+
+This visualization is quite complex, but we can already see that different students have different kinds of engagement: some are more prone to talking (long green bars), some to manipulating reources (long blue bars). We can also do a similar profiling by group: 
+
+```{r engagement-grp}
+# Engagement profile of a student
+ag_grp <- aggregate(cbind(disengaged,looking,talking,resources,external)~group, data=student_obs, FUN="mean")
+meltedgrp <- melt(ag_grp)
+ggplot(meltedgrp, aes(x=as.factor(group),y=value))+geom_bar(aes(fill = variable), position = "dodge", stat="identity")+coord_flip()+theme_minimal()
+
+```
+
+However, these pictures are still quite complex. One way to try to simplify them is to see whether there are underlying, latent factors in this data. Using [Principal Component Analysis](http://setosa.io/ev/principal-component-analysis/) we can try to extract these latent factors from the numerical properties of the data (e.g., which of the variables tend to vary together), and we obtain the two dimensions shown below:
+
+```{r pca-obs}
+pca.student <- PCA(student_obs[,4:8], scale.unit = TRUE, graph = FALSE)
+# Interpretation of dimensions: engagement, external focus
+student_obs$participation <- pca.student$ind$coord[,1]
+student_obs$focusext <- pca.student$ind$coord[,2]
+plot(pca.student,choix="var")
+```
+
+These two dimensions (the X and Y axes of the figure above) we can interpret as follows:
+
+1. The X axis can be how much each student (or observation, or group) is **participating** (or engaged actively) in the taks (as it correlates with using resources, talking with peers or external people). We can see that in the negative side are the disengaged behaviors, or just looking as others solve the task.
+2. The Y axis seems to be more related to **where the attention is directed to**: towards external people (or away from the task) (positive Y axis), or towards the group (either talking or looking).
+
+Using these two indexes (participation and group/external focus), we can draw the profiles of each student -- like saying that Group 5 student D (a foreign student that could not speak Estonian) had low participation (`r mean(student_obs[student_obs$student.id=="Group 5 StudentD","participation"])`), but her focus of attention still was mostly towards the group (`r mean(student_obs[student_obs$student.id=="Group 5 StudentD","focusext"])`). We can also profile the groups, like below:
+
+```{r pca-grp-stu, fig.height=3, fig.width=8}
+# Graph... maybe too complex
+# fviz_pca_ind(pca.student,
+#              geom.ind = "point", # show points only (but not "text")
+#              col.ind = student_obs$group, # color by groups
+#              addEllipses = TRUE, # Concentration ellipses
+#              legend.title = "Groups", ellipse.type = "confidence", repel = T
+#              )
+#agpca <- aggregate(cbind(participation,focusext)~group, data=student_obs, FUN=mean)
+#meltpca <- melt(agpca)
+#ggplot(agpca, aes(x=participation, y=focusext, col=group))+geom_point(size=3)
+
+meltpca <- melt(student_obs, id.vars = c("group","student.id"), measure.vars = c("participation","focusext"))
+
+ggplot(meltpca, aes(y=value, x=group, fill=group))+geom_violin()+geom_boxplot(alpha=0.1)+facet_wrap(~variable)+coord_flip()
+
+```
+
+Above, we can see for example that group 2 has a high profile of participation, quite balanced between external and intra-group focus of attention.
+
+We can also see, for example, how the engagement varied over time (which we can relate to the different activities):
+
+```{r pca-time}
+ggplot(student_obs, aes(x=timestamp, y=participation))+geom_smooth(span = 0.15, se=F)+theme_minimal()#+geom_point(alpha=0.1,size=4)
+
+
+#ggplot(student_obs, aes(x=timestamp, y=focusext))+geom_smooth(span = 0.15, se=F)+theme_minimal()#+geom_point(alpha=0.1,size=4)
+```
+
+### Engagement over time/activities
+
+TODO: needs estimation of when each group was doing which activity
+
+### Equality (in engagement, in individual contribution)
+
+A common feature in the study of collaborative learning and problem-solving is to look at equal participation (e.g., the absence of free-riders or otherwise passive members of the group). This equality can be measured using the [Gini coefficient](https://en.wikipedia.org/wiki/Gini_coefficient), which goes from zero (perfect equality) to one (total inequality, one member doing all the work). We can use different data sources to see this equality: a) the individual contributions to the task self-reported by students; b) the active participation calculated from the observations above. We can thus ask ourselves how equal was the participation in each of the groups, from those two points of view:
+
+```{r gini-grp}
+
+ag_gini <- aggregate(contribution~group, data=fb1_data, FUN=ineq)
+
+ag_part <- aggregate(participation~student.id+group, data = student_obs, FUN=mean)
+ag_part$participation <- ag_part$participation-min(ag_part$participation) # We make the values all positive
+
+ag_gini2 <- aggregate(participation~group, data=ag_part, FUN=ineq)
+
+gini <- merge(ag_gini, ag_gini2)
+names(gini) <- c("group", "student.reported", "observed")
+ggplot(gini, aes(x=student.reported, y=observed, col=group))+geom_point(size=3)+xlim(0,1)+ylim(0,1)+ggtitle("Participation inequality (Gini coefficient)")+theme_minimal()
+```
+
+From the graph above we see that there is a certain correlation between the student-reported and observer-reported inequalities (corr=`r cor(gini$student.reported,gini$observed)`), and that Group 3 had much more equal participation than other groups (e.g., Group 1).
+
+<!-- Not very useful, they are quite the same...
+* Were there differences between the self-reported participation levels in the different activities?-->
+
+```{r gini-act}
+
+# aggini <- aggregate(contribution~activity, data=fb1_data, FUN=ineq)
+# names(aggini)[[2]] <- "Gini"
+# 
+# kable(aggini)
+
+```
+
+We can also try to relate this equality with the learning outcomes... TODO!
 
 ### Relationship with learning outcomes
 * What is the relation between learning outcomes vs. group engagement?
@@ -358,7 +458,25 @@ Also related to this, it is worth noting that observers noticed the main teacher
 
 ### Flow aspects?
 
-difficulty vs. preparedness vs. satisfaction?
+Indeed, we can explore further this relationship between difficulty of the activity and student satisfaction with that activity:
+
+```{r difficulty-satisfaction}
+ggplot(fb1_data, aes(x=satisfaction, y=difficulty, col=activity))+geom_jitter(size=3, width=0.3, height=0.3, alpha=0.5)+theme_minimal()+scale_y_continuous(breaks=seq(0,9,1), limits=c(0,9))+scale_x_continuous(breaks=seq(0,9,1), limits=c(0,9))+geom_smooth(method="lm",se=F)#+geom_smooth(col="grey", se=F)
+
+
+```
+
+As we can see, for all activities the trend is that, the more difficult the activities are, students are less satisfied. This is, on the one hand, logical (nobody likes to do difficult things). On the other hand, the learning design should strive towards challenging tasks (as they can lead to more learning) that are nevertheless satisfying to complete.
+
+<!--An alternative way of looking at the same idea of how to approach the state of "flow" is to look at the relationship between preparedness and difficulty (in flow, the difficulty of the task matches the preparedness or skill of the subject), and see whether that matches the flow:-->
+
+```{r difficulty-preparedness-satisfaction}
+# Not very useful visualization
+# ggplot(fb1_data, aes(x=preparedness, y=difficulty, size=satisfaction))+geom_jitter(width=0.3, height=0.3, alpha=0.5)+theme_minimal()+scale_y_continuous(breaks=seq(0,9,1), limits=c(0,9))+scale_x_continuous(breaks=seq(0,9,1), limits=c(0,9))+scale_size(breaks=seq(0,9,1), limits=c(0,9))+facet_wrap(~activity)+geom_smooth(method="lm",se=F)#+geom_smooth(col="grey", se=F)
+
+
+```
+
 
 ### Student self-reflection on strategies
 
