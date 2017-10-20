@@ -4,11 +4,19 @@ subtitle: "Research Report"
 author: "Luis P. Prieto, María Jesús Rodríguez-Triana, Shashi Kant Shankar and Terje Väljataga"
 abstract: "This document describes the research questions and data gathered for the first session of the HIK project days with activities outside the classroom (dubbed 'Linnaruum'), that took place on the 11 October 2017. It also includes the analysis of evidence gathered that day, to illuminate those research questions. Finally, the report includes recommendations and proposals for the research and learning design of future iterations of this learning experience."
 bibliography: project-days.bib
+always_allow_html: yes
 output: word_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F, warning = F, message = F, error = F)
+knitr::opts_chunk$set(echo = F, warning = F, message = F, error = F, digits=3)
+
+inline_hook <- function(x) {
+  if (is.numeric(x)) {
+    format(x, digits = 3)
+  } else x
+}
+knitr::knit_hooks$set(inline = inline_hook)
 
 library(ggplot2)
 library(data.table)
@@ -17,6 +25,7 @@ library(reshape2)
 library(FactoMineR)
 library(factoextra)
 library(GGally)
+library(timevis)
 
 source("../src/preprocessMultimodalTracker.R")
 
@@ -24,9 +33,9 @@ source("../src/preprocessMultimodalTracker.R")
 
 As part of its activities to promote educational innovation among local schools, TLU's Center for Innovation in Education (HIK, in Estonian) organizes a series of 'project days', learning experiences for students at different levels of primary/secondary education, that are inter-disciplinary and project-oriented. These activities are usually designed and enacted by HIK's didactics teachers, and offered to classes of local schools multiple times throughout the academic course.
 
-This report is part of a joint collaboration between HIK and the TLU's CEITER project to turn these project days into the subject of a co-created research and innovation process. More concretely, it reports about the first pilot of these events that took place on October 11th, 2017. This project day had as a topic the exploration of a concrete urban space (Tallinn's Kadriorg neighborhood), and included both classroom and outdoor activities (in the neighborhood itself).
+This report is part of a joint collaboration between HIK and the TLU's CEITER project, to turn these project days into the subject of a co-created design-based research and innovation process. More concretely, it reports about the first pilot of these events that took place on October 11th, 2017. This project day had as a topic the exploration of a concrete urban space (Tallinn's Kadriorg neighborhood), and included both classroom and outdoor activities in the neighborhood itself.
 
-The goal of this report is to **report on the first iteration of data analyses** done on the data of the first pilot. Both HIK and CEITER will engage in making sense of these results and use them as a basis to decide **how to best organize the next iterations of this project day**, both from the learner experience and from the research perspectives.
+The goal of this report is to **report on the first data analyses** done on the evidence from the first pilot. Both HIK and CEITER will engage in making sense of these results and use them as a basis to decide **how to best organize the next iterations of this project day**, both from the learner experience and from the research perspectives.
 
 In the following sections, we summarize briefly: a) the initial set of research questions posed; b) the methodology used to collect and analyze data; c) what happened on the day of the event, what data has been gathered, and what are the results of the proposed analysis to answer the aforementioned questions; and finally, d) proposes several recommendations about the design of the activities and the research setup for the next iterations.
 
@@ -40,7 +49,9 @@ Although in the preparatory meetings between HIK and CEITER researchers there we
 
 # Methodology
 
-Given the exploratory nature of the study at this stage, and the complexity of the phenomena of interest (mentioned in the last section), we chose a *mixed method approach* [@creswell2013research], combining both qualitative and quantitative data gathering and analysis. This combination of data sources, and the inclusion of sensors to understand the physical space around the activities, makes this research part of the *multimodal learning analytics* field [@blikstein2013multimodal].
+The overall collaboration (expected to span the activities of the whole year) can be described as a design-based research [@wang2005design] co-created between researchers and practitioners working on an authentic educational setting (the 'HIK project days' events).
+
+In this first iteration, given the exploratory nature of the study at this stage, and the complexity of the phenomena of interest (mentioned in the research questions above), we chose a *mixed method approach* [@creswell2013research], combining both qualitative and quantitative data gathering and analysis. This combination of data sources, and the inclusion of sensors to understand the physical space around the activities, make this research part of the *multimodal learning analytics* field [@blikstein2013multimodal].
 
 ## Data gathering
 
@@ -191,7 +202,7 @@ names(fb2_data) <- c("timestamp", "group", "student", "strategies", "roles", "ov
 fb2_data$student.id <- paste(fb2_data$group,fb2_data$student)
 ```
 
-## Data analysis
+## Data analysis -- TODO!!
 
 These six different data sources can be analyzed quantitatively using basic *descriptive statistics*, to see, for instance, what activities the students found most difficult, most/least relevant, what kinds of engagements were most often observed, etc. Using a bit more advanced *unsupervised learning* and *dimensionality reduction* techniques, we can look a bit more deeply whether there were certain engagement or collaboration profiles in different groups (from the observations taken).
 
@@ -214,8 +225,8 @@ Furthermore, combinations of multiple of these sources can be used, for instance
 
 This first pilot event was a relative success. Apparently, most groups were able to follow most of the activities successfully, and many of them appeared to be quite engaged in solving the tasks. As expected in a complex scenario and research effort organized so hastily, there were also deviations with regard to the plans (e.g., the final reflection activity was done the day after, some students wrote their responses in the paper sheets instead of the electronic version, etc.). Nevertheless, quite an amount of data was generated during this first Kadriorg project day: 
 
-* Six observers gathered a total of `r nrow(group_obs)` observations for the groups of students (an average of `r ceiling(nrow(group_obs)/6)` per group).
-* Students provided a total of `r nrow(fb1_data)` responses to the individual activity feedbacks (around 75% of the expected amount).
+* Six observers gathered a total of `r nrow(group_obs)` observations for the groups of students (an average of `r ceiling(nrow(group_obs)/6)` per group), approximately one every 5 minutes.
+* Students provided a total of `r nrow(fb1_data)` responses to individual activity feedback forms (around 75% of the expected amount).
 * Students provided a total of `r nrow(fb2_data)` responses to the final reflection questionnaire (around `r (nrow(fb2_data)/30)*100`% of the expected amount).
 * Due to a technical glitch, NO useful geolocation data was recorded outside the classrooms, and the data about the amount of movement of the groups lasted for only a part of the whole event, between 45 minutes and the whole 4 hours
 * The teacher(s) have provided an assessment of the learning outcomes of the activities done by the different groups **PENDING MERILIN!**
@@ -226,18 +237,111 @@ This first pilot event was a relative success. Apparently, most groups were able
 
 ### Learning outcomes
 
+**TODO: Pending Merilin**
 
 ### Student perception of activities
 
-* What activities students found most difficult or satisfying or relevant for the purpose?
-* What is the relation between activity difficulty vs. satisfaction?
+The **overall perception of the activities** (from the individual activity feedback given in the moment, and the final reflection responses given the following day) is rather positive, as we can see in the graphs below:
 
-* *There are a few student suggestions about other potential activities that could be done in this project day*
+```{r overall-fb}
+plotdata <- fb1_data[,2:10]
+melted <- melt(plotdata, id.vars = c(1:3,9), measure.vars = 4:8)
+
+melted_cont <- melted[melted$variable=="contribution",]
+melted_rest <- melted[melted$variable!="contribution",]
+
+# Overall distribution of contributions, satisfaction, difficulty, preparedness
+# ggplot(melted_cont, aes(x=value))+geom_density()+theme_minimal()+xlim(0,100)
+ggplot(melted_rest, aes(x=value))+geom_histogram(fill="lightgrey",bins=10)+theme_minimal()+scale_x_continuous(breaks=seq(0,9,1), limits=c(0,9))+ggtitle("Student perception of activities, in-the-moment")+facet_grid(~ variable)
+
+
+ggplot(fb2_data, aes(x=overall.satisfaction))+geom_histogram(fill="grey",bins=10)+theme_minimal()+scale_x_continuous(breaks=seq(0,9,1), limits=c(0,9))+ggtitle("Overall satisfaction, next day reflection")
+
+```
+
+A couple of effects are worth mentioning from the graphs above: 
+
+* the overall satisfaction was quite high in the moment (median: `r median(fb1_data$satisfaction)`), but the next day the perception was a bit less positive (median `r median(fb2_data$overall.satisfaction)`, and less students even cared to respond).
+* the values of how difficult and how relevant the activities were perceived to be are quite spread out (and, let's remember, many students did not complete the activity about the poetry). Probably the activities can be polished a bit to make them more relevant, and quite difficult (but not too much).
+
+Even more interesting to polish the activity design, we can look at **how the students perceived each activity**:
+
+```{r activity-fb, fig.height=4, fig.width=8}
+# # difficulty, preparedness and satisfaction per activity
+ggplot(melted_rest, aes(x=variable, y=value))+geom_boxplot(aes(fill=activity))+theme_minimal()+scale_y_continuous(breaks=seq(0,9,1), limits=c(0,9))
+# Are differences significant?
+
+# summary(lm(difficulty~activity, data=fb1_data)) # Activity II seems to be considerably easier
+# anova(lm(difficulty~activity, data=fb1_data))
+# 
+# summary(lm(preparedness~activity, data=fb1_data)) # no big differences in preparedness
+# anova(lm(preparedness~activity, data=fb1_data))
+# 
+# summary(lm(satisfaction~activity, data=fb1_data)) # no big differences in satisfaction
+# anova(lm(satisfaction~activity, data=fb1_data))
+# 
+# summary(lm(relevant~activity, data=fb1_data)) # no big differences in relevancy
+# anova(lm(relevant~activity, data=fb1_data))
+
+
+# # relation between difficulty, preparedness and satisfaction (flow constructs)
+# ggplot(fb1_data, aes(x=difficulty, y=satisfaction, col=activity))+geom_jitter(size=4, alpha=0.3)+geom_smooth(se=F)
+# ggpairs(fb1_data[,6:9],
+#         lower = list(continuous = wrap("points", alpha = 0.1)))+theme_minimal()
+```
+
+As we can see, there are small differences among the values of the different activities, but most of these differences are not statistically significant. The only difference that seems more significant is the fact that activity II (finding a house and doing a selfie) was perceived as considerably easier by students (t=`r summary(lm(difficulty~activity, data=fb1_data))$coefficients['activityII','t value']`, p=`r summary(lm(difficulty~activity, data=fb1_data))$coefficients['activityII','Pr(>|t|)']`). This might explain why students were also most satisfied with that activity. Indeed, we can explore further this relationship between difficulty of the activity and student satisfaction with that activity:
+
+```{r difficulty-satisfaction}
+ggplot(fb1_data, aes(x=satisfaction, y=difficulty, col=activity))+geom_jitter(size=3, width=0.3, height=0.3, alpha=0.5)+theme_minimal()+scale_y_continuous(breaks=seq(0,9,1), limits=c(0,9))+scale_x_continuous(breaks=seq(0,9,1), limits=c(0,9))+geom_smooth(method="lm",se=F)
+
+
+```
+
+As we can see, for all activities the trend is that, the more difficult the activities are, students are less satisfied. This is, on the one hand, logical (nobody likes to do difficult things). On the other hand, the learning design should strive towards challenging tasks (as they can lead to more learning) that are nevertheless satisfying to complete.
+
+Finally, by looking at the responses students provided about **suggestions for future activities** (see [this spreadsheet](https://docs.google.com/spreadsheets/d/1R4EKJ1KYiuMqjT41p72XP4Lbsv_5JrDGfWRhQ_CSRNk/edit#gid=52226403), column G), we see that things like orienteering/scavenger hunts/photohunts were most often mentioned, as well as more technology-oriented suggestions like videos about Kadriorg's past or an app/platform/web with geolocated information about the neighborhood's past (similar to the idea of SmartZoos). There were mentions to "better composed instructions" as well :).
 
 ### Timing and orchestration
 
-* How much time did activities take for the different groups (vs. the planned duration)?
-* Need for real-time location information [source?]
+The most important question in this regard is **how much time did activities take for the different groups** (vs. the planned duration). Using the time when students filled in the activity feedback as limits for each of the activities, we can see the following picture:
+
+```{r timing}
+# Timeline of student feedback responses... not as clean as we thought!
+timevis(data = data.frame(
+  start = fb1_data$timestamp,
+  content = fb1_data$activity,
+  group = as.numeric(fb1_data$group)),
+  groups = data.frame(id = sort(unique(as.numeric(fb1_data$group))), content = sort(levels(fb1_data$group)))
+ )
+
+```
+
+We see that calculating how much time each group took is quite messy, as responses for an activity are spread over time a lot (was it because they were responding it late, or they just mis-typed the activity they were responding to?). Let's look at only one of the groups, and map also the observer notes on it: are the two sources really aligned? can we really know what activity they were doing until when?
+
+```{r timing-obs}
+# Timeline including also the observer notes... example for group 1 only?
+group1_fb <- fb1_data[fb1_data$group=="Group 1",c("timestamp","activity")]
+names(group1_fb) <- c("timestamp","text")
+group1_fb$source <- "student"
+group1_obs <- group_obs[group_obs$group=="Group 1",c("timestamp","comment")]
+names(group1_obs) <- c("timestamp","text")
+group1_obs$source <- "observer"
+group1 <- rbind(group1_fb,group1_obs)
+group1$source <- as.factor(group1$source)
+
+timevis(data = data.frame(
+  start = group1$timestamp,
+  content = group1$text,
+  group = as.numeric(group1$source)),
+  groups = data.frame(id = sort(unique(as.numeric(group1$source))), content = sort(levels(group1$source)))
+ )
+
+
+
+```
+
+Also related to this, it is worth noting that observers noticed the main teacher going around the neighborhood in a bike, to check on the different groups of students (and sometimes noticing that she had "lost one group" :)). This might suggest the need for **monitoring functions** in the technological support for the activities (especially about geographical location of the students).
 
 ## Collaborative problem solving (RQ2)
 
@@ -260,7 +364,7 @@ difficulty vs. preparedness vs. satisfaction?
 
 * *Student reflections about the strategies used and role-taking are very short and superficial*
 
-other aspects????
+## Other analyses??
 
 # Recommendations
 
