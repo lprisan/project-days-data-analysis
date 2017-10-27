@@ -2,10 +2,10 @@
 title: "HIK Project Day -- Linnaruum: Day 1 (11.10.2017)"
 subtitle: "Research Report"
 author: "Luis P. Prieto, María Jesús Rodríguez-Triana, Shashi Kant Shankar and Terje Väljataga"
-abstract: "This document describes the research questions and data gathered for the first session of the HIK project days with activities outside the classroom (dubbed 'Linnaruum'), that took place on the 11 October 2017. It also includes the analysis of evidence gathered that day, to illuminate those research questions. Finally, the report includes recommendations and proposals for the research and learning design of future iterations of this learning experience."
+abstract: "This document describes the research questions and data gathered for the first session of the HIK project days with activities outside the classroom (dubbed 'Linnaruum'), that took place on the 11 October 2017. It also includes the analysis of evidence gathered that day, to illuminate those research questions. Finally, the report includes recommendations and proposals for the research and learning design of future iterations of this project day."
 bibliography: project-days.bib
 always_allow_html: yes
-output: word_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -21,6 +21,7 @@ knitr::knit_hooks$set(inline = inline_hook)
 library(ggplot2)
 library(data.table)
 library(xlsx)
+library(reshape)
 library(reshape2)
 library(FactoMineR)
 library(factoextra)
@@ -44,15 +45,15 @@ In the following sections, we summarize briefly: a) the initial set of research 
 
 # Research questions
 
-Although in the preparatory meetings between HIK and CEITER researchers there were no clear, concrete research question expressed, several topics were mentioned as interesting and worthy of exploration, especially around two areas:
+Although in the preparatory meetings between HIK and CEITER researchers there were no clear, concrete research question expressed, several topics were mentioned as interesting and worthy of exploration:
 
-* **RQ1**: Naturally, there were mentions of finding out whether the activities were successful in teaching something to the students, and were considered relevant for that purpose (i.e., more **content-related learning outcomes** and the improvement of the **learning design** of the activity)
+* **RQ1**: Naturally, there were mentions of finding out whether the activities were successful in teaching something to the students, and were considered relevant for that purpose (i.e., **content-related learning outcomes** and the improvement of the **learning design** of the activity)
 * **RQ2**: Teachers showed an interest in exploring the **collaborative problem solving (CPS)** of students, which often includes issues such as participation, role distribution or role-taking, etc.
 * **RQ3**: Teachers also highlighted an interest on **self-regulated learning** aspects, including the ability to follow instructions autonomously, reflecting on their own learning strategies, engagement and flow, etc.
 
 # Methodology
 
-The overall collaboration (expected to span the activities of the whole year) can be described as a design-based research [@wang2005design] co-created between researchers and practitioners working on an authentic educational setting (the 'HIK project days' events).
+The overall collaboration (expected to span the project days' activities of the whole year) can be described as a design-based research [@wang2005design] co-created between researchers and practitioners working on the improvement an authentic educational setting (i.e., these 'HIK project days' events).
 
 In this first iteration, given the exploratory nature of the study at this stage, and the complexity of the phenomena of interest (mentioned in the research questions above), we chose a *mixed method approach* [@creswell2013research], combining both qualitative and quantitative data gathering and analysis. This combination of data sources, and the inclusion of sensors to understand the physical space around the activities, make this research part of the *multimodal learning analytics* field [@blikstein2013multimodal].
 
@@ -65,11 +66,11 @@ The following techniques were used to gather data about the learners and the lea
 
 | **Social level** | **Frequency** | **Data source** | **Focus** |
 |:---------|:---------|:---------|:------------------------------------|
-| Individual &amp; Group | Every 5 min | [Observations](https://docs.google.com/document/d/1-TinmdR5T6Hyk-Hwac5M8t6r0KdNdh8JJu40rz2i_ao/edit) | Keep track of the individual engagement based on observable interactions. Also comments at the group level were gathered. |
-| Individual | Per activity | [Questionnaire](https://docs.google.com/forms/d/e/1FAIpQLSf4CoYnq1acQb7f1nF7PCajSvLnMfKCQhVSYQqx2eHqOkH3Og/viewform) | Self reflection: about the activity, its difficulty and relevance, as well as their perceived individual contribution in the collaboration process |
-| Individual | At the end of the whole activity | [Questionnaire](https://docs.google.com/forms/u/1/d/e/1FAIpQLScHyFD1p2WBqVk5FDiyVkk-LdpVucYs1oDtpx9-vJqSbGIdOA/viewform) | Gather the overall impression of the activities, and a short reflection about their problem solving strategies and role-taking |
-| Group | Constantly | Beacons + tablets with tracking software | Record the (approximate) movement of the groups including  the amount of movement, GPS data, and indoor location |
-| Group | Per activity | [Outcomes](https://docs.google.com/document/u/1/d/1ltmc3sialqIavRcIFKR2YTbnJlpmEsBvBT7t-yiqMbM/edit) | Assessment |
+| Individual &amp; Group | Every 5 min | [Observations](https://docs.google.com/document/d/1-TinmdR5T6Hyk-Hwac5M8t6r0KdNdh8JJu40rz2i_ao/edit) | Keep track of the individual engagement based on observable interactions. Also free-form comments at the group level were gathered. |
+| Individual | At the end of each activity (once) | [Questionnaire](https://docs.google.com/forms/d/e/1FAIpQLSf4CoYnq1acQb7f1nF7PCajSvLnMfKCQhVSYQqx2eHqOkH3Og/viewform) | Student self-report: about the activity, its difficulty and relevance, as well as their perceived individual contribution in the collaboration process |
+| Individual | At the end of the whole project day | [Questionnaire](https://docs.google.com/forms/u/1/d/e/1FAIpQLScHyFD1p2WBqVk5FDiyVkk-LdpVucYs1oDtpx9-vJqSbGIdOA/viewform) | Gather the overall impression of the activities, and a short reflection about their problem solving strategies and role-taking |
+| Group | Constantly | Beacons + tablets with tracking software (by the observer) | Record the (approximate) movement of the groups including  the amount of movement, GPS data, and indoor location (room) |
+| Group | Per activity | [Outcomes](https://drive.google.com/open?id=1Pio8UDC-iDvS6Vv1rR9do1WVS6BwFhwCikeWuuHBR_A) | Teacher's assessment of the responses given by each group of students |
 
 
 ```{r preprocess, cache=TRUE}
@@ -149,6 +150,10 @@ names(obs_data) <- c("timestamp", "group", "StudentA", "StudentB", "StudentC", "
 
 obs_data <- obs_data[,c(-8,-9)]
 
+# Cleanup invalid data, before 10am like "2017-10-11 09:44:49 GMT"
+obs_data <- obs_data[obs_data$timestamp>as.POSIXct("2017-10-11 10:00:00 GMT", origin = "1970-01-01", tz = "GMT"),]
+
+
 # Student view of the observations
 student_obs <- melt(obs_data, id=1:2, measure=3:7)
 student_obs$disengaged <- as.numeric(grepl(pattern = "disengaged", x = student_obs$value, fixed = TRUE))
@@ -204,15 +209,49 @@ fb2_datafile <- "../data/raw/20171011/Avastame Kadriorgu - Final feedback (Respo
 fb2_data <- read.xlsx(fb2_datafile, sheetIndex = 1)
 names(fb2_data) <- c("timestamp", "group", "student", "strategies", "roles", "overall.satisfaction", "suggestions")
 fb2_data$student.id <- paste(fb2_data$group,fb2_data$student)
+
+######### ASSESSMENTS DATA
+# Read and clean the group assessment data
+ass_datafile <- "../data/raw/20171011/Outcomes-Assessment.xlsx"
+ass_data <- read.xlsx(ass_datafile, sheetIndex = 1)
+ass_data <- ass_data[1:6,1:13]
+names(ass_data)[1:7] <- c("group","Task.1.Quali.Maps",
+                            "Task.2.Quali.Description.Selfie",
+                            "Task.3.Quali.Interview",
+                            "Task.4.Quali.Poem.Selfie","Task.5.Quali.Wrapup",
+                            "Task.6.Quali.Art")
+ass_data$group <- as.factor(ass_data$group)
+levels(ass_data$group) <- c("Group 1", "Group 2", "Group 3", "Group 4", "Group 5", "Group 6")
+
+########## TIMING DATA
+# Read and clean the timing data
+tim_datafile <- "../data/raw/20171011/Start_end activity times.xlsx"
+tim_data <- read.xlsx(tim_datafile, sheetIndex = 1, colClasses = )
+# We fix the dates in the read times
+datefixer <- function(x, what){
+  library(lubridate)
+  olddate <- x[what]
+  hours <- hour(olddate)-3 # Adjustment due to timezones?
+  minutes <- minute(olddate)
+  newdate <- ymd_hms(paste("2017-10-11 ",hours,":",minutes,":00",sep=""))
+  newdate
+}
+tim_data$new.start <- as.POSIXct(apply(tim_data, 1, datefixer, "start"), origin="1970-01-01")
+tim_data$new.end <- as.POSIXct(apply(tim_data, 1, datefixer, "end"), origin="1970-01-01")
+tim_data$group <- as.factor(ass_data$group)
+levels(tim_data$group) <- c("Group 1", "Group 2", "Group 3", "Group 4", "Group 5", "Group 6")
+tim_data <- tim_data[,c(1,2,5,6,7)]
+names(tim_data) <- c("group","activity","planned","start","end")
+tim_data$duration <- as.numeric(tim_data$end - tim_data$start)
 ```
 
-## Data analysis -- TODO!!
+## Data analysis
 
-These six different data sources can be analyzed quantitatively using basic *descriptive statistics*, to see, for instance, what activities the students found most difficult, most/least relevant, what kinds of engagements were most often observed, etc. Using a bit more advanced *unsupervised learning* and *dimensionality reduction* techniques, we can look a bit more deeply whether there were certain engagement or collaboration profiles in different groups (from the observations taken).
+These data sources can be analyzed quantitatively using basic *descriptive statistics*, to see, for instance, what activities the students found most difficult, most/least relevant, what kinds of engagements were most often observed, etc. Using a bit more advanced *unsupervised learning* and *dimensionality reduction* techniques, we can look a bit more deeply into whether there were certain engagement or collaboration profiles in different groups (from the observations taken).
 
-The qualitative data from the open questions in the observations and the student questionnaires can also be analyzed using *content analysis* techniques, to see if there are common topics or trends mentioned. These could be complemented with *interviews* with the main teacher of the project day and the other organizing teachers that designed/coordinated each of the activities, to gather the teacher's perspective on the success of the activities, emergent problems, etc.
+The qualitative data from the open questions in the observations and the student questionnaires can also be analyzed using *content analysis* techniques, to see if there are common topics or trends mentioned. These could be complemented with the teachers' assessment and perspective on the success of the activities, emergent problems, etc.
 
-Furthermore, combinations of multiple of these sources can be used, for instance, to see if there are *correlations* between the outcomes of a group and the engagement or collaboration profile, or between the engagement and the satisfaction with the activities. However, these correlations will probably not be statistically significant, given the small number of groups/students involved (rather, showing trends that can be investigated more deeply later on).
+Furthermore, combinations of multiple of these sources can be used, for instance, to see if there are *correlations* between the outcomes of a group and their engagement or collaboration profile, or between the engagement and the satisfaction with the activities. However, these correlations will probably not be statistically significant, given the small number of groups/students involved (rather, showing trends that can be investigated more deeply later on).
 
 **Table 2. Data Analyses -- TODO: complete with all the research questions, topics/concrete questions and analyses used??**
 
@@ -233,7 +272,7 @@ This first pilot event was a relative success. Apparently, most groups were able
 * Students provided a total of `r nrow(fb1_data)` responses to individual activity feedback forms (around 75% of the expected amount).
 * Students provided a total of `r nrow(fb2_data)` responses to the final reflection questionnaire (around `r (nrow(fb2_data)/30)*100`% of the expected amount).
 * Due to a technical glitch, NO useful geolocation data was recorded outside the classrooms, and the data about the amount of movement of the groups lasted for only a part of the whole event, between 45 minutes and the whole 4 hours
-* The teacher(s) have provided an assessment of the learning outcomes of the activities done by the different groups **PENDING MERILIN!**
+* The teacher(s) have provided an assessment of the learning outcomes of the activities done by the different groups
 * The teacher(s) provided their own perceptions of the results of the activities, see the final section of [this document](https://docs.google.com/document/d/1-TinmdR5T6Hyk-Hwac5M8t6r0KdNdh8JJu40rz2i_ao/edit#).
 
 
@@ -241,11 +280,73 @@ This first pilot event was a relative success. Apparently, most groups were able
 
 ### Learning outcomes
 
-**TODO: Pending Merilin**
+The first question we can ask is how well did the different groups of students perform in the different activities. From the graph below showing the average score (from 1-poor, 2-satisfactory, 3-good, 4-very well), we see that all groups performed similarly quite well, except for Group 6, that did substantially worse. It will be interesting to follow this group more closely in the next analyses below.
+
+```{r overall-outcomes}
+## Summarizes data.
+## Gives count, mean, standard deviation, standard error of the mean, and confidence 
+## interval (default 95%).
+##   data: a data frame.
+##   measurevar: the name of a column that contains the variable to be summariezed
+##   groupvars: a vector containing names of columns that contain grouping variables
+##   na.rm: a boolean that indicates whether to ignore NA's
+##   conf.interval: the percent range of the confidence interval (default is 95%)
+summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE, conf.interval=.95) {
+    library(doBy)
+
+    # New version of length which can handle NA's: if na.rm==T, don't count them
+    length2 <- function (x, na.rm=FALSE) {
+        if (na.rm) sum(!is.na(x))
+        else       length(x)
+    }
+
+    # Collapse the data
+    formula <- as.formula(paste(measurevar, paste(groupvars, collapse=" + "), sep=" ~ "))
+    datac <- summaryBy(formula, data=data, FUN=c(length2,mean,sd), na.rm=na.rm)
+
+    # Rename columns
+    names(datac)[ names(datac) == paste(measurevar, ".mean",    sep="") ] <- measurevar
+    names(datac)[ names(datac) == paste(measurevar, ".sd",      sep="") ] <- "sd"
+    names(datac)[ names(datac) == paste(measurevar, ".length2", sep="") ] <- "N"
+    
+    datac$se <- datac$sd / sqrt(datac$N)  # Calculate standard error of the mean
+    
+    # Confidence interval multiplier for standard error
+    # Calculate t-statistic for confidence interval: 
+    # e.g., if conf.interval is .95, use .975 (above/below), and use df=N-1
+    ciMult <- qt(conf.interval/2 + .5, datac$N-1)
+    datac$ci <- datac$se * ciMult
+    
+    return(datac)
+}
+
+# Summarize the assessment with standard error etc
+melted_ass <- melt(ass_data[,c(1,8:13)], id.vars = 1)
+aggr_ass <- summarySE(melted_ass, measurevar="value", groupvars=c("group"))
+ggplot(aggr_ass, aes(x=group, y=value, fill=group)) + 
+    geom_bar(position=position_dodge(), stat="identity") +
+    geom_errorbar(aes(ymin=value-ci, ymax=value+ci),
+                  width=.2,                    # Width of the error bars
+                  position=position_dodge(.9))+theme_minimal()+ylim(c(0,4))+
+    ggtitle("Average teacher assessment per group,\nfrom 1-poor, to 4-very good")
+
+aggr_ass2 <- summarySE(melted_ass, measurevar="value", groupvars=c("variable"))
+ggplot(aggr_ass2, aes(x=variable, y=value, fill=variable)) + 
+    geom_bar(position=position_dodge(), stat="identity") +
+    geom_errorbar(aes(ymin=value-ci, ymax=value+ci),
+                  width=.2,                    # Width of the error bars
+                  position=position_dodge(.9))+theme_minimal()+ylim(c(0,4))+
+    scale_fill_brewer(palette="Set2")+
+    ggtitle("Average teacher assessment per activity,\nfrom 1-poor, to 4-very good")
+
+```
+
+The second graph above shows that most groups had problems with Activity 5 (the wrap-up activity), and that everyone performed very good on Activity 6 (the artistic/creative vision). This suggests that maybe the design for these two activities (or the assessment criteria) could be improved.
+
 
 ### Student perception of activities
 
-The **overall perception of the activities** (from the individual activity feedback given in the moment, and the final reflection responses given the following day) is rather positive, as we can see in the graphs below:
+The students' **overall perception of the activities** (from the individual activity feedback given in the moment, and the final reflection responses given the following day) is rather positive, as we can see in the graphs below:
 
 ```{r overall-fb}
 plotdata <- fb1_data[,2:10]
@@ -265,10 +366,10 @@ ggplot(fb2_data, aes(x=overall.satisfaction))+geom_histogram(fill="grey",bins=10
 
 A couple of effects are worth mentioning from the graphs above: 
 
-* the overall satisfaction was quite high in the moment (median: `r median(fb1_data$satisfaction)`), but the next day the perception was a bit less positive (median `r median(fb2_data$overall.satisfaction)`, and less students even cared to respond).
-* the values of how difficult and how relevant the activities were perceived to be are quite spread out (and, let's remember, many students did not complete the activity about the poetry). Probably the activities can be polished a bit to make them more relevant, and quite difficult (but not too much).
+* the overall satisfaction was quite high in the moment (median value: `r median(fb1_data$satisfaction)`), but the next day the perception was a bit less positive (median `r median(fb2_data$overall.satisfaction)`, and less students cared to respond).
+* the values of how difficult and how relevant the activities were perceived to be, are quite spread out (and, let's remember, many students did not complete the activity about the poetry). Probably the activities can be polished a bit to make them more relevant, and maybe a bit more difficult (but not too much).
 
-Even more interesting to polish the activity design, we can look at **how the students perceived each activity**:
+Even more interesting to polish the activity design, we can look at **how the students perceived each activity**. We only have data from questionnaires for the first 4 activities (I-Maps, II-Description&Selfie, III-Interviews, IV-Poem&Selfie):
 
 ```{r activity-fb, fig.height=4, fig.width=8}
 # # difficulty, preparedness and satisfaction per activity
@@ -296,47 +397,155 @@ ggplot(melted_rest, aes(x=variable, y=value, fill=activity))+geom_boxplot()+them
 
 As we can see, there are small differences among the values of the different activities, but most of these differences are not statistically significant. The only difference that seems more significant is the fact that activity II (finding a house and doing a selfie) was perceived as considerably easier by students (t=`r summary(lm(difficulty~activity, data=fb1_data))$coefficients['activityII','t value']`, p=`r summary(lm(difficulty~activity, data=fb1_data))$coefficients['activityII','Pr(>|t|)']`). This might explain why students were also most satisfied with that activity. 
 
+Indeed, we can see there is a quite strong negative correlation (`r cor(plotdata$satisfaction, plotdata$difficulty)`) between students' perceived difficulty of an activity and their satisfaction with it (i.e., students don't like how they perform in the more difficult activities).
+
+```{r perc-corr}
+
+ggplot(plotdata, aes(x=difficulty, y=satisfaction))+theme_minimal()+geom_jitter(height=0.1, width = 0.1, size=3, alpha=0.3)+geom_smooth(method = "lm")
+#cor(plotdata$satisfaction, plotdata$difficulty) # -0.45, Correlation of satisfaction and assessment is negative! Good satisfaction is not good proof of learning...
+#cor.test(data_rest$satisfaction, data_rest$difficulty) # Not significant/strong
+
+```
+
+
 Finally, by looking at the responses students provided about **suggestions for future activities** (see [this spreadsheet](https://docs.google.com/spreadsheets/d/1R4EKJ1KYiuMqjT41p72XP4Lbsv_5JrDGfWRhQ_CSRNk/edit#gid=52226403), column G), we see that things like orienteering/scavenger hunts/photohunts were most often mentioned, as well as more technology-oriented suggestions like videos about Kadriorg's past or an app/platform/web with geolocated information about the neighborhood's past (similar to the idea of SmartZoos). There were mentions to "better composed instructions" as well :).
 
-### Timing and orchestration
+### Student perception vs. outcomes
 
-The most important question in this regard is **how much time did activities take for the different groups** (vs. the planned duration). Using the time when students filled in the activity feedback as limits for each of the activities, we can see the following picture:
+We can also see whether there is any relationship between the two aspects above: how students perceived the activities, and how good were each group's learning outcomes:
+
+```{r perc-outcomes}
+
+# Join assessment data with the individual perceptions
+levels(melted_ass$variable) <- c("I", "II", "III", "IV", "V", "VI")
+names(melted_ass) <- c("group", "activity", "assessment")
+melt_melt_ass <- melt(melted_ass, id.vars = c(1,2))
+
+data_rest <- dcast(melted_rest, student.id+group+activity~variable, mean)
+# We add the assessment data
+lookup <- function(x){melt_melt_ass[melt_melt_ass$group == x['group'] & melt_melt_ass$activity == x['activity'],'value']}
+data_rest$assessment <- apply(data_rest, 1, lookup)
+
+ggplot(data_rest, aes(x=satisfaction, y=assessment))+theme_minimal()+geom_jitter(height=0.1, width = 0.1, size=3, alpha=0.3)+geom_smooth(method = "lm")
+#cor(data_rest$satisfaction, data_rest$assessment) # -0.18, Correlation of satisfaction and assessment is negative! Good satisfaction is not good proof of learning...
+#cor.test(data_rest$satisfaction, data_rest$assessment) # Not significant/strong
+ggplot(data_rest, aes(x=difficulty, y=assessment))+theme_minimal()+geom_jitter(height=0.1, width = 0.1, size=3, alpha=0.3)+geom_smooth(method="lm")
+#cor(data_rest$difficulty, data_rest$assessment) # Correlation of difficulty and assessment is positive! More difficult activities do not necessarily lead to less performance (rather the opposite)
+#cor.test(data_rest$difficulty, data_rest$assessment) # Not significant/strong
+```
+
+From the graphs above we see that student satisfaction with their performance is not a good indicator for how they did in the actual assessment according to the teacher -- something other studies have also proven [@bowman2010can; @sitzmann2010self]. Interestingly, students tended to perform better (according to the teacher assessment) in those activities that they perceived as more difficult.
+
+
+### Activity timing and orchestration
+
+Another important question when deciding how the learning activities should be changed, is **how much time did activities take for the different groups** (vs. the planned duration). However, determining this is not an easy task, as students (even within a same group) filled in the activity questionnaires at oddly different times. Hence, we have (painfully) calculated these durations by hand, triangulating the different data sources (observations, student activity responses, sensors):
 
 ```{r timing}
-# Timeline of student feedback responses... not as clean as we thought!
-timevis(data = data.frame(
-  start = fb1_data$timestamp,
-  content = fb1_data$activity,
-  group = as.numeric(fb1_data$group)),
-  groups = data.frame(id = sort(unique(as.numeric(fb1_data$group))), content = sort(levels(fb1_data$group)))
- )
+# # Timeline of student feedback responses... not as clean as we thought!
+# timevis(data = data.frame(
+#   start = fb1_data$timestamp,
+#   content = fb1_data$activity,
+#   group = as.numeric(fb1_data$group)),
+#   groups = data.frame(id = sort(unique(as.numeric(fb1_data$group))), content = sort(levels(fb1_data$group)))
+#  )
+# 
+# # Timeline including also the observer notes... example for group 1 only?
+# group1_fb <- fb1_data[fb1_data$group=="Group 6",c("timestamp","activity")]
+# names(group1_fb) <- c("timestamp","text")
+# group1_fb$source <- "student"
+# group1_obs <- group_obs[group_obs$group=="Group 6",c("timestamp","comment")]
+# names(group1_obs) <- c("timestamp","text")
+# group1_obs$source <- "observer"
+# group1 <- rbind(group1_fb,group1_obs)
+# group1$source <- as.factor(group1$source)
+# 
+# timevis(data = data.frame(
+#   start = group1$timestamp,
+#   content = group1$text,
+#   group = as.numeric(group1$source)),
+#   groups = data.frame(id = sort(unique(as.numeric(group1$source))), content = sort(levels(group1$source)))
+#  )
+
+```
+
+We can try to get some idea about when certain activities happened, from the observer notes and the data about when each group was in each room (tracked by the tablets carried by the observer). For those that happened outside (i.e., no room data), we can try to make an "educated guess" taking into account the student activity questionnaires. This gives us a timeline like the following:
+
+```{r beacons-pos}
+# # From https://drive.google.com/open?id=0Bzyi_E7EV3EjRDlYNzFUTGx5c1U
+# beacon_lookup <- function(x){
+#   minor <- x['minor']
+#   room <- NULL;
+#   if(minor=="125" | minor=="65407" | minor=="36240") room="T412"
+#   else if(minor=="33533") room="T410"
+#   else if(minor=="5800") room="T420"
+#   else if(minor=="22568") room="T416"
+#   else if(minor=="57540") room="T415"
+#   else if(minor=="16007" | minor=="25969") room="Corridor"
+# 
+#   room
+# }
+# 
+# for (g in unique(beacons$group)){
+#   beacons_grp <- beacons[beacons$group==g,]
+#   unique_beacons <- data.frame()
+#   for(t in unique(beacons_grp$timestamp)){
+#     beacons_t <- beacons_grp[beacons_grp$timestamp==t,] # Select the registers with a same timestamp, and get the one with strongest signal
+#     if(nrow(unique_beacons)==0) unique_beacons <- (beacons_t[which.max(beacons_t$rssi),])[1,]
+#     else unique_beacons <- rbind(unique_beacons, (beacons_t[which.max(beacons_t$rssi),])[1,])
+#   }
+#   unique_beacons$room <- as.factor(apply(unique_beacons,1,beacon_lookup))
+#   cutoff_beacons <- unique_beacons[unique_beacons$rssi>-90,] # The threshold is determined by trial and error!
+#   print(ggplot(cutoff_beacons, aes(x=as.POSIXct(timestamp/1000, origin = "1970-01-01"),y=room, col=room))+geom_jitter(size=3,alpha=0.3)+theme_minimal()+ggtitle(paste("Group",g)))
+# }
+
+
+# I-Maps, II-Description&Selfie, III-Interviews, IV-Poem&Selfie, V-Wrapup, VI-Art
+# The student activity questionnaires are offset -1hr!!
+# Activity I: From https://drive.google.com/open?id=0Bzyi_E7EV3EjTGt5REs1UTNreUk
+# All start at 10:04 (teacher explanation), 10:10 Start observations
+# End times taken from the beacon visualizations, or the observations
+# Activity II: 
+# Start a the end of the first one. End From the observation or the student questionnaire?
+
+# Activity IV: From https://drive.google.com/open?id=0Bzyi_E7EV3EjTGt5REs1UTNreUk
+# Start ...
+# All end at 11:55 the latest
+
+# Activity V: From https://drive.google.com/open?id=0Bzyi_E7EV3EjTGt5REs1UTNreUk
+# All start at 12:30, end at 13:00 - triangulate with my tablet (Group 5) or Chus (Group 3)?
+
+
+# Activity VI: From https://drive.google.com/open?id=0Bzyi_E7EV3EjTGt5REs1UTNreUk
+# All start at 13:00, end at 13:30 - triangulate with my tablet (Group 5) or Chus (Group 3)?
 
 
 ```
 
-We see that calculating how much time each group took is quite messy, as responses for an activity are spread over time a lot (was it because they were responding it late, or they just mis-typed the activity they were responding to?). Let's look at only one of the groups, and map also the observer notes on it: are the two sources really aligned? can we really know what activity they were doing until when?
+```{r durations, fig.height=4, fig.width=8}
 
-```{r timing-obs}
-# Timeline including also the observer notes... example for group 1 only?
-group1_fb <- fb1_data[fb1_data$group=="Group 1",c("timestamp","activity")]
-names(group1_fb) <- c("timestamp","text")
-group1_fb$source <- "student"
-group1_obs <- group_obs[group_obs$group=="Group 1",c("timestamp","comment")]
-names(group1_obs) <- c("timestamp","text")
-group1_obs$source <- "observer"
-group1 <- rbind(group1_fb,group1_obs)
-group1$source <- as.factor(group1$source)
+melted_tim <- melt(tim_data, id.vars = c(1,2), measure.vars = 6)
+ag_plan <- aggregate(planned~activity, tim_data, mean)
+ag_plan$group <- "Planned"
+ag_plan$variable <- "duration"
+ag_plan$value <- ag_plan$planned
+ag_plan <- ag_plan[,c("group","activity","variable","value")]
+durations <- rbind(melted_tim,ag_plan)
 
-timevis(data = data.frame(
-  start = group1$timestamp,
-  content = group1$text,
-  group = as.numeric(group1$source)),
-  groups = data.frame(id = sort(unique(as.numeric(group1$source))), content = sort(levels(group1$source)))
- )
-
-
-
+ggplot(durations, aes(x=variable, y=value, fill=group)) + 
+    geom_bar(position=position_dodge(), stat="identity")+
+    theme_minimal()+
+    ggtitle("Activity durations")+facet_wrap(~activity)
 ```
+
+As we can see:
+
+* Activity I (Maps) seemed to take roughly the planned amount of time (`r mean(tim_data[tim_data$activity=="I",'duration'])` mins, 35 planned)
+* *Activity II (Description & Selfie) took roughly `r mean(tim_data[tim_data$activity=="II",'duration'])` minutes (compared to 25 planned)*
+* *Activity III (Interviews) also took less time than expected (`r mean(tim_data[tim_data$activity=="III",'duration'])` mins vs. 45 planned)*
+* **Activity IV (Poem & Selfie) took on average `r mean(tim_data[tim_data$activity=="IV",'duration'])` (vs. 15 expected)**
+* **Activity V (Wrap-up) actually took more time than expected (about 30 mins, vs. 15 planned)**
+* Activity VI (Art) was spot on its alloted 30 mins (probably because time was up and students had to go anyways)
 
 Also related to this, it is worth noting that observers noticed the main teacher going around the neighborhood in a bike, to check on the different groups of students (and sometimes noticing that she had "lost one group" :)). This might suggest the need for **monitoring functions** in the technological support for the activities (especially about geographical location of the students).
 
@@ -354,7 +563,7 @@ ggplot(meltedstu, aes(x=as.factor(student.id),y=value))+geom_bar(aes(fill = vari
 
 ```
 
-This visualization is quite complex, but we can already see that different students have different kinds of engagement: some are more prone to talking (long green bars), some to manipulating reources (long blue bars). We can also do a similar profiling by group: 
+This visualization is quite complex, but we can already see that different students have different kinds of engagement: some are more prone to talking (long green bars), some to manipulating resources (long blue bars). We can also do a similar profiling by group: 
 
 ```{r engagement-grp}
 # Engagement profile of a student
@@ -395,20 +604,35 @@ Using these two indexes (participation and group/external focus), we can draw th
 
 meltpca <- melt(student_obs, id.vars = c("group","student.id"), measure.vars = c("participation","focusext"))
 
+# Optional: filter only groups 2 and 6 for comparison
+filteredpca <- meltpca[meltpca$group=="Group 2" | meltpca$group == "Group 6",] 
+
+#ggplot(filteredpca, aes(y=value, x=group, fill=group))+geom_violin()+geom_boxplot(alpha=0.1)+facet_wrap(~variable)+coord_flip()
 ggplot(meltpca, aes(y=value, x=group, fill=group))+geom_violin()+geom_boxplot(alpha=0.1)+facet_wrap(~variable)+coord_flip()
 
 ```
 
-Above, we can see for example that group 2 has a high profile of participation, quite balanced between external and intra-group focus of attention.
+Above, we can see for example that Group 2 (the one with best average outcomes) has a high profile of participation, quite balanced between external and intra-group focus of attention. We can compare this group with Group 6 (the lowest performers), who had a much lower participation profile.
 
-We can also see, for example, how the engagement varied over time (which we can relate to the different activities):
+We can also see, for example, how the engagement varied over time, for each group:
 
 ```{r pca-time}
-ggplot(student_obs, aes(x=timestamp, y=participation))+geom_smooth(span = 0.15, se=F)+theme_minimal()#+geom_point(alpha=0.1,size=4)
+filteredobs <- student_obs[student_obs$group=="Group 2" | student_obs$group=="Group 6",]
 
-
-#ggplot(student_obs, aes(x=timestamp, y=focusext))+geom_smooth(span = 0.15, se=F)+theme_minimal()#+geom_point(alpha=0.1,size=4)
+#ggplot(student_obs, aes(x=timestamp, y=participation, col=group))+geom_smooth(span = 0.15, se=F)+theme_minimal()#+geom_point(alpha=0.1,size=4)
+ggplot(filteredobs, aes(x=timestamp, y=participation, col=group))+geom_smooth(span = 0.15, se=F)+theme_minimal()#+geom_point(alpha=0.1,size=4)
 ```
+
+... or how the inside/outside focus also varied over time
+
+```{r pca-time2}
+#ggplot(student_obs, aes(x=timestamp, y=focusext, col=group))+geom_smooth(span = 0.15, se=F)+theme_minimal()#+geom_point(alpha=0.1,size=4)
+
+# TODO: add segment with the activities and durations for each group?
+
+ggplot(filteredobs, aes(x=timestamp, y=focusext, col=group))+geom_smooth(span = 0.15, se=F)+theme_minimal()#+geom_point(alpha=0.1,size=4)
+```
+
 
 ### Engagement over time/activities
 
