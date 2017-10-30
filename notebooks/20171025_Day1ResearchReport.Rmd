@@ -5,7 +5,7 @@ author: "Luis P. Prieto, María Jesús Rodríguez-Triana, Shashi Kant Shankar an
 abstract: "This document describes the research questions and data gathered for the first session of the HIK project days with activities outside the classroom (dubbed 'Linnaruum'), that took place on the 11 October 2017. It also includes the analysis of evidence gathered that day, to illuminate those research questions. Finally, the report includes recommendations and proposals for the research and learning design of future iterations of this project day."
 bibliography: project-days.bib
 always_allow_html: yes
-output: html_document
+output: word_document
 ---
 
 ```{r setup, include=FALSE}
@@ -231,13 +231,13 @@ tim_data <- read.xlsx(tim_datafile, sheetIndex = 1, colClasses = )
 datefixer <- function(x, what){
   library(lubridate)
   olddate <- x[what]
-  hours <- hour(olddate)-3 # Adjustment due to timezones?
+  hours <- hour(olddate) # Adjustment due to timezones?
   minutes <- minute(olddate)
   newdate <- ymd_hms(paste("2017-10-11 ",hours,":",minutes,":00",sep=""))
   newdate
 }
-tim_data$new.start <- as.POSIXct(apply(tim_data, 1, datefixer, "start"), origin="1970-01-01")
-tim_data$new.end <- as.POSIXct(apply(tim_data, 1, datefixer, "end"), origin="1970-01-01")
+tim_data$new.start <- as.POSIXct(apply(tim_data, 1, datefixer, "start"), origin="1970-01-01", tz = "GMT")
+tim_data$new.end <- as.POSIXct(apply(tim_data, 1, datefixer, "end"), origin="1970-01-01", tz = "GMT")
 tim_data$group <- as.factor(ass_data$group)
 levels(tim_data$group) <- c("Group 1", "Group 2", "Group 3", "Group 4", "Group 5", "Group 6")
 tim_data <- tim_data[,c(1,2,5,6,7)]
@@ -253,14 +253,23 @@ The qualitative data from the open questions in the observations and the student
 
 Furthermore, combinations of multiple of these sources can be used, for instance, to see if there are *correlations* between the outcomes of a group and their engagement or collaboration profile, or between the engagement and the satisfaction with the activities. However, these correlations will probably not be statistically significant, given the small number of groups/students involved (rather, showing trends that can be investigated more deeply later on).
 
-**Table 2. Data Analyses -- TODO: complete with all the research questions, topics/concrete questions and analyses used??**
+**Table 2. Data Analyses Performed**
 
-| **Type of analyses** | **Technique** | **Aspect to be analysed** |
-|:---------|:---------|:------------------------------------|
-| Quantitative | Descriptive statistics | Students' perception of the activities (difficult, most/least relevant, what kinds of engagements were most often observed, etc) |
-| Quantitative | Unsupervised learning and dimensionality reduction | Extraction of engagement or collaboration profiles in different groups |
-| Quantitative | Statistical analyses | Correlations between the outcomes of a group and the engagement or collaboration profile, or between the engagement and the satisfaction |
-| Qualitative | Content analyses | Detection of common topics or trends mentioned |
+| **Research Question** | **Informative question** | **Data source** | **Technique** | **Kind of analysis** |
+|:------|:----------------------------|:------|:------|:------|
+| RQ1 – Content and Pedagogical design improvement | Which groups performed better?Which activities had better/worse student outcomes? | Teacher&#39;s assessments | Descriptive statistics | Quantitative |
+| RQ1 – Content and Pedagogical design improvement | How did students perceive the activities in terms of difficulty/ preparedness/ satisfaction/ relevance? What other activities can be done? | Students&#39; activity questionnaires, Final reflection (day after) | Descriptive statistics, Content analysis | Quantitative + Qualitative |
+| RQ1 – Content and Pedagogical design improvement | What is the relationship between students&#39; perceptions of the activities and the learning outcomes? | Teacher&#39;s assessments, Students&#39; activity questionnaires | Correlation tests | Quantitative |
+| RQ1 – Content and Pedagogical design improvement | How long did students take to do the activities? | Students&#39; activity questionnaires, Observations, Tracker tablets | Manual matching (!) | Quantitative + Qualitative |
+| RQ2 – Collaborative Problem Solving | How engaged was each student/group in the collaborative work? | Observations | Descriptive statistics | Quantitative |
+| RQ2 – Collaborative Problem Solving | How engaged were students/groups over time? | Observations | Descriptive statistics | Quantitative |
+| RQ2 – Collaborative Problem Solving | How engaged were students/groups in each activity? | Observations, Student activity questionnaires, Tracker tablets | Descriptive statistics | Quantitative |
+| RQ2 – Collaborative Problem Solving | Is there are relation between the students&#39; engagements and their learning outcomes? | Observations, Teacher&#39;s assessments | Correlation tests | Quantitative |
+| RQ2 – Collaborative Problem Solving | Do different students show different kinds/profiles of participation? | Observations | Cluster analysis | Quantitative |
+| RQ2 – Collaborative Problem Solving | How equal was the participation of students within a group? | Observations, Student activity questionnaires | Descriptive statistics, Correlation tests | Quantitative |
+| RQ3 – Self-regulated learning | Was there any problem for students to follow the instructions? | Teacher&#39;s assessment, Observations | Content analysis | Qualitative |
+| RQ3 – Self-regulated learning | Was there a relationship between the activities&#39; difficulty, preparedness and satisfaction? (flow) | Student activity questionnaires | Correlation tests | Quantitative |
+| RQ3 – Self-regulated learning | Did students follow specific strategies to solve the tasks or organize collaboration? | Students&#39; final feedback questionnaire | Content analysis | Qualitative |
 
 
 
@@ -397,11 +406,12 @@ ggplot(melted_rest, aes(x=variable, y=value, fill=activity))+geom_boxplot()+them
 
 As we can see, there are small differences among the values of the different activities, but most of these differences are not statistically significant. The only difference that seems more significant is the fact that activity II (finding a house and doing a selfie) was perceived as considerably easier by students (t=`r summary(lm(difficulty~activity, data=fb1_data))$coefficients['activityII','t value']`, p=`r summary(lm(difficulty~activity, data=fb1_data))$coefficients['activityII','Pr(>|t|)']`). This might explain why students were also most satisfied with that activity. 
 
-Indeed, we can see there is a quite strong negative correlation (`r cor(plotdata$satisfaction, plotdata$difficulty)`) between students' perceived difficulty of an activity and their satisfaction with it (i.e., students don't like how they perform in the more difficult activities).
+<!-- Removed, we tell the same in the RQ3
+Indeed, we can see there is a quite strong negative correlation (`r cor(plotdata$satisfaction, plotdata$difficulty)`) between students' perceived difficulty of an activity and their satisfaction with it (i.e., students don't like how they perform in the more difficult activities).-->
 
 ```{r perc-corr}
 
-ggplot(plotdata, aes(x=difficulty, y=satisfaction))+theme_minimal()+geom_jitter(height=0.1, width = 0.1, size=3, alpha=0.3)+geom_smooth(method = "lm")
+# ggplot(plotdata, aes(x=difficulty, y=satisfaction))+theme_minimal()+geom_jitter(height=0.1, width = 0.1, size=3, alpha=0.3)+geom_smooth(method = "lm")
 #cor(plotdata$satisfaction, plotdata$difficulty) # -0.45, Correlation of satisfaction and assessment is negative! Good satisfaction is not good proof of learning...
 #cor.test(data_rest$satisfaction, data_rest$difficulty) # Not significant/strong
 
@@ -623,20 +633,133 @@ filteredobs <- student_obs[student_obs$group=="Group 2" | student_obs$group=="Gr
 ggplot(filteredobs, aes(x=timestamp, y=participation, col=group))+geom_smooth(span = 0.15, se=F)+theme_minimal()#+geom_point(alpha=0.1,size=4)
 ```
 
-... or how the inside/outside focus also varied over time
+... or how the inside/outside focus also varied over time, for group 6, along the times they were doing the different activities:
 
 ```{r pca-time2}
 #ggplot(student_obs, aes(x=timestamp, y=focusext, col=group))+geom_smooth(span = 0.15, se=F)+theme_minimal()#+geom_point(alpha=0.1,size=4)
 
-# TODO: add segment with the activities and durations for each group?
+filteredobs6 <- filteredobs[filteredobs$group == "Group 6",]
+filteredobs2 <- filteredobs[filteredobs$group == "Group 2",]
 
-ggplot(filteredobs, aes(x=timestamp, y=focusext, col=group))+geom_smooth(span = 0.15, se=F)+theme_minimal()#+geom_point(alpha=0.1,size=4)
+ggplot(filteredobs6, aes(x=timestamp, y=participation, col=group))+geom_smooth(span = 0.15, se=F)+theme_minimal()+geom_segment(data=tim_data[tim_data$group=="Group 6",], aes(x=start, xend=end, y=-3, yend=-3, col=activity, size=10))
 ```
-
 
 ### Engagement over time/activities
 
-TODO: needs estimation of when each group was doing which activity
+By joining the activity timing of each group with the observer-reported participation values, we can see in which activities students were more engaged:
+
+
+```{r pca-time-act}
+# Looks at the start/end times of activities, and determines which activity was being performed for each observation (or NA)
+lookupact <- function(x){
+  act <- NA
+  gr <- x['group']
+  time <- as.POSIXct(x['timestamp'], tz="GMT")
+  row <- tim_data[tim_data$group==gr & tim_data$start<=time & tim_data$end>=time,]
+  if(nrow(row)>0) act <- as.character((row[,'activity'])[[1]])
+  act
+}
+
+student_obs$activity <- as.factor(apply(student_obs, 1, lookupact))
+
+aggr_part <- summarySE(student_obs, measurevar="participation",
+                      groupvars=c("activity"))
+
+ggplot(aggr_part[complete.cases(aggr_part),], aes(x=activity, y=participation, fill=activity)) + 
+    geom_bar(position=position_dodge(), stat="identity") +
+    geom_errorbar(aes(ymin=participation-ci, ymax=participation+ci),
+                  width=.2,                    # Width of the error bars
+                  position=position_dodge(.9))+theme_minimal()
+
+```
+
+We notice that overall participation was not very different across the different activities, *except* for activity II (Description & Selfie), the one that was considered considerably easier than the others. Although we do not have observer date about activity V (the wrap-up), the [teacher noted that groups did not participate in that activity either](https://drive.google.com/open?id=1Pio8UDC-iDvS6Vv1rR9do1WVS6BwFhwCikeWuuHBR_A).
+
+We can do the same for our observer measures of student focus towards inside-outside the group, which were similar for all activities except activity III (the interviews). This was expected, since it forced the students to talk to quite a few people on the street.
+
+```{r pca-time-act2}
+
+aggr_focus <- summarySE(student_obs, measurevar="focusext",
+                      groupvars=c("activity"))
+
+ggplot(aggr_focus[complete.cases(aggr_focus),], aes(x=activity, y=focusext, fill=activity)) + 
+    geom_bar(position=position_dodge(), stat="identity") +
+    geom_errorbar(aes(ymin=focusext-ci, ymax=focusext+ci),
+                  width=.2,                    # Width of the error bars
+                  position=position_dodge(.9))+theme_minimal()
+
+```
+
+
+### Relationship with learning outcomes
+
+We can also try to see if there was any relationship or trend between such observed values of participation and the learning outcomes assessed by the teacher:
+
+```{r part-ass}
+
+ag_part <- aggregate(participation~group+activity, data=student_obs, mean)
+ass_part <- merge(melted_ass, ag_part)
+
+ggplot(ass_part, aes(x=participation, y=assessment))+geom_point(size=3, alpha=0.3)+
+  theme_minimal()+geom_smooth(method="lm")
+
+#cor.test(ass_part$assessment, ass_part$participation) # p-value: 0.003362
+
+ag_foc <- aggregate(focusext~group+activity, data=student_obs, mean)
+ass_foc <- merge(melted_ass, ag_foc)
+# 
+# ggplot(ass_foc, aes(x=focusext, y=assessment))+geom_point(size=3, alpha=0.3)+
+#   theme_minimal()+geom_smooth(method="lm")
+# 
+# #cor.test(ass_foc$assessment, ass_foc$focusext) # p-value: 0.94
+
+```
+
+There we can see that indeed there is a quite high correlation between the participation index as calculated by the observers, and the teacher assessment of the products of the activities (`r cor(ass_part$assessment, ass_part$participation)`). Hence, this variable is probably quite valuable to follow (even in real-time) in future project days. On the other hand, the "internal/external focus" index has virtually no correlation with the learning outcomes (`r cor(ass_foc$assessment, ass_foc$focusext)`).
+
+
+### Engagement profiles (or clusters)
+
+We can also try to see if there are different "engagement profiles" among different students. There seem to be about 5 different student profiles, according to their observed participation:
+
+```{r kmeans}
+
+students <- aggregate(cbind(disengaged,looking,talking,resources,external)~student.id,
+                      data=student_obs[,4:9], FUN=mean)
+
+# Determine number of clusters
+wss <- (nrow(students)-1)*sum(apply(students,2,var))
+for (i in 2:15){
+  set.seed(12345)
+  wss[i] <- sum(kmeans(students[,-1], 
+  	centers=i)$withinss)
+}
+#plot(1:15, wss, type="b", xlab="Number of Clusters",
+#  ylab="Within groups sum of squares")
+
+# K-Means Cluster Analysis
+set.seed(12345)
+fit <- kmeans(students[,-1], 5) # 4 cluster solution
+# get cluster means 
+
+profiles <- aggregate(students[,-1],by=list(fit$cluster),FUN=mean)
+profiles$Num.students <- table(fit$cluster)
+names(profiles)[[1]] <- "Profile"
+profiles$Profile <- as.factor(profiles$Profile)
+levels(profiles$Profile) <- c("High.Part","Low.Part","Moderate.Part",
+                              "Disengage.Look","Moderate.And.Talk")
+kable(profiles)
+# append cluster assignment
+studentclust <- data.frame(students, fit$cluster)
+names(studentclust)[[7]] <- "Profile"
+studentclust$Profile <- as.factor(studentclust$Profile)
+levels(studentclust$Profile) <- c("High.Part","Low.Part","Moderate.Part",
+                              "Disengage.Look","Moderate.And.Talk")
+kable(studentclust)
+```
+
+From these tables we can see the make-up of groups in terms of how many high- (or low-) participation students it has. For instance, we can compare Group 6 (which had lowest assessment scores -- made up of low and moderate participation students) vs. Group 2 (which had highest scores -- made up almost exclusively by students with high participation). Again, we see that there is a certain relationship between the participation/engagement of a group's participants and the assessment scores. Also, it is interesting to note that this profiles are able to single out the only international student that did not speak Estonian, and thus could not participate equally to the other students (Group 5 Student D).
+
 
 ### Equality (in engagement, in individual contribution)
 
@@ -656,57 +779,75 @@ names(gini) <- c("group", "student.reported", "observed")
 ggplot(gini, aes(x=student.reported, y=observed, col=group))+geom_point(size=3)+xlim(0,1)+ylim(0,1)+ggtitle("Participation inequality (Gini coefficient)")+theme_minimal()
 ```
 
-From the graph above we see that there is a certain correlation between the student-reported and observer-reported inequalities (corr=`r cor(gini$student.reported,gini$observed)`), and that Group 3 had much more equal participation than other groups (e.g., Group 1).
+From the graph above we see that there is a certain correlation between the student-reported and observer-reported inequalities (corr=`r cor(gini$student.reported,gini$observed)`), and that Group 3 had much more equal participation than other groups (e.g., Group 1). 
 
-<!-- Not very useful, they are quite the same...
-* Were there differences between the self-reported participation levels in the different activities?-->
 
-```{r gini-act}
+```{r gini-act2}
+aggini_actgrp <- aggregate(contribution~activity+group, data=fb1_data, FUN=ineq)
+names(aggini_actgrp)[[3]] <- "Gini.selfreport"
+ag_partact <- aggregate(participation~student.id+group+activity, data = student_obs, FUN=mean)
+ag_partact$participation <- ag_partact$participation-min(ag_partact$participation) # We make the values all positive
+aggini_actgrp2 <- aggregate(participation~activity+group, data=ag_partact, FUN=ineq)
+names(aggini_actgrp2)[[3]] <- "Gini.observed"
 
-# aggini <- aggregate(contribution~activity, data=fb1_data, FUN=ineq)
-# names(aggini)[[2]] <- "Gini"
-# 
-# kable(aggini)
+aggini <- merge(aggini_actgrp,aggini_actgrp2, all=T)
+
+aggini_ass <- merge(aggini, melted_ass, all=T)
+
+#cor.test(aggini_ass$Gini.selfreport, aggini_ass$assessment, use="complete.obs") # cor=+0.19
+#cor.test(aggini_ass$Gini.observed, aggini_ass$assessment, use="complete.obs") # cor=-0.48!
+
+#ggplot(aggini_ass, aes(x=Gini.selfreport, y=Gini.observed))+
+#  theme_minimal()+geom_point(size=4, alpha=0.3)+geom_smooth(method="lm", se=F)
 
 ```
 
-We can also try to relate this equality with the learning outcomes... TODO!
 
-### Relationship with learning outcomes
-* What is the relation between learning outcomes vs. group engagement?
+However, if we look at the level of each activity, we see that this Gini coefficients (the observed and the self-reported), do not have that much to do (corr=`r cor(aggini_ass$Gini.selfreport, aggini_ass$Gini.observed, use="complete.obs")`).
+
+We can also try to relate this (in)equality in participation (either self-reported or observed) with the learning outcomes: we find that there is a slight positive correlation between self-reported equality of participation and the learning outcomes (corr=`r cor(aggini_ass$Gini.selfreport, aggini_ass$assessment, use="complete.obs")`), while there is a strong *negative* correlation between the observed equality of participation and the learning outcomes (corr=`r cor(aggini_ass$Gini.observed, aggini_ass$assessment, use="complete.obs")`). This might indicate one or more things:
+
+* that this equality of participation is not so important for achieving a group outcome in an activity (although such equality may be valuable in itself, to foster other skills like collaboration, not evaluated in the teacher assessment). 
+* It might also indicate that different ways of participating are actually good for achieving a good final outcomes (i.e., if everyone is talking at the same time, it may be hard to achieve actual collaboration). Something to dig deeper in future analyses, maybe.
 
 ## Self-regulated learning (RQ3)
 
-### Attention and instruction-following
+### Attention and instruction-following (functional reading)
 
+As noted by the [teacher in her assessment of the activities](https://drive.google.com/open?id=1Pio8UDC-iDvS6Vv1rR9do1WVS6BwFhwCikeWuuHBR_A), multiple groups of students had problems understanding the instructions, and reflecting or seeing through figurative language. This may point towards the investigation of *functional reading* in the students, and how the activities could scaffold or develop this skill.
 
-### Flow aspects?
+### Flow aspects
 
-Indeed, we can explore further this relationship between difficulty of the activity and student satisfaction with that activity:
+We can explore the relationship between difficulty of the activity and student satisfaction with that activity (as theory of flow indicates that engaging, flow-inducing activities tend to be challenging... but matching the skills of the learners):
 
 ```{r difficulty-satisfaction}
-ggplot(fb1_data, aes(x=satisfaction, y=difficulty, col=activity))+geom_jitter(size=3, width=0.3, height=0.3, alpha=0.5)+theme_minimal()+scale_y_continuous(breaks=seq(0,9,1), limits=c(0,9))+scale_x_continuous(breaks=seq(0,9,1), limits=c(0,9))+geom_smooth(method="lm",se=F)#+geom_smooth(col="grey", se=F)
+ggplot(fb1_data, aes(x=satisfaction, y=difficulty))+geom_jitter(size=3, width=0.3, height=0.3, alpha=0.5)+theme_minimal()+scale_y_continuous(breaks=seq(0,9,1), limits=c(0,9))+scale_x_continuous(breaks=seq(0,9,1), limits=c(0,9))+geom_smooth(method="lm",se=F)#+geom_smooth(col="grey", se=F)
 
 
 ```
 
-As we can see, for all activities the trend is that, the more difficult the activities are, students are less satisfied. This is, on the one hand, logical (nobody likes to do difficult things). On the other hand, the learning design should strive towards challenging tasks (as they can lead to more learning) that are nevertheless satisfying to complete.
+As we can see, for all activities the trend is that, the more difficult the activities are perceived, students are less satisfied with their performance. This is, on the one hand, logical (nobody likes to do difficult things). On the other hand, the learning design should strive towards challenging tasks (as they can lead to more learning) that are nevertheless satisfying to complete.
 
-<!--An alternative way of looking at the same idea of how to approach the state of "flow" is to look at the relationship between preparedness and difficulty (in flow, the difficulty of the task matches the preparedness or skill of the subject), and see whether that matches the flow:-->
+An alternative way of looking at the same idea of how to approach the state of "flow" is to look at the relationship between preparedness and difficulty (in flow, the difficulty of the task matches the preparedness or skill of the subject), and see whether that matches the flow:
 
 ```{r difficulty-preparedness-satisfaction}
 # Not very useful visualization
-# ggplot(fb1_data, aes(x=preparedness, y=difficulty, size=satisfaction))+geom_jitter(width=0.3, height=0.3, alpha=0.5)+theme_minimal()+scale_y_continuous(breaks=seq(0,9,1), limits=c(0,9))+scale_x_continuous(breaks=seq(0,9,1), limits=c(0,9))+scale_size(breaks=seq(0,9,1), limits=c(0,9))+facet_wrap(~activity)+geom_smooth(method="lm",se=F)#+geom_smooth(col="grey", se=F)
+ggplot(fb1_data, aes(x=preparedness, y=difficulty, size=satisfaction))+geom_jitter(width=0.3, height=0.3, alpha=0.5)+theme_minimal()+scale_y_continuous(breaks=seq(0,9,1), limits=c(0,9))+scale_x_continuous(breaks=seq(0,9,1), limits=c(0,9))+scale_size(breaks=seq(0,9,1), limits=c(0,9))+#facet_wrap(~activity)+geom_smooth(method="lm",se=F)#
+geom_smooth(method="lm",se=F)
 
 
 ```
 
+Right now, we see the activities do not really follow the "ideal flow trend", which would be an upwards slope, with a lot of points in the top-right corner of the graph. Again, this suggests further work is needed to make activities that are both challenging but matching the students' skills (even if that is quite difficult, considering that students can be at very different levels of preparedness, even within a group).
 
-### Student self-reflection on strategies
+### Student self-reflection on work and collaboration strategies
 
-* *Student reflections about the strategies used and role-taking are very short and superficial*
+Looking at the students' own reflections of how they worked or how the distributed the tasks (in the [final questionnaire about the activities](https://drive.google.com/open?id=1R4EKJ1KYiuMqjT41p72XP4Lbsv_5JrDGfWRhQ_CSRNk)), we notice that responses are rather short and superficial, and in general indicate that there was not much thought put into how to collaborate or solve the problems (i.e., collaboration was rather free-form, with no defined roles or tasks).
 
-## Other analyses??
+This may (or may not) be something to explore in the future, for instance, whether assigning explicit roles or ways to collaborate, improves the collaboration process or the learning outcomes.
+
+
+## Are there other analyses that would be interesting with the data available?
 
 # Recommendations
 
@@ -714,17 +855,16 @@ Below are a few recommendations and proposals derived from the results shown abo
 
 ## Improving the learning scenario
 
-* Use of a technological platform/environment to more effectively guide students, centralize evidence (student responses) and gather more data about the process (including real-time information!) --> use of SmartZoos, Graasp or other environment?
-* It looks like some of the activities were not done (students gave up on the poetry activity?). Should we adjust the tasks or their difficulties or expected durations?
+* Use of a technological platform/environment to more effectively guide students, centralize evidence (student responses) and gather more data about the process (including real-time information on where they are!) --> should we use SmartZoos, Graasp or other environment?
+* It looks like some of the activities were not done (students gave up on the poetry activity?), or had very low participation (e.g., the wrap-up done after lunch). Also, some activities took much longer than expected (e.g., the poem one). Should we adjust the tasks, or their difficulties, or expected durations?
+* Also, right now the process of determining when each group is starting/ending what activity is quite messy, depending on multiple sources and manual work. Maybe the use of a centralized environment could also help us gather this information more easily.
 
 ## Improving the research process
 
-* The use of a technological platform for all the exercises would provide us with a new data source (the actions of the students recorded by the platform). However, the way we suggest students to use it (e.g., use it as a group vs. individually) will lead to different kinds
+* The use of a technological platform for all the exercises would provide us with a new data source (the actions of the students recorded by the platform). However, the way we suggest students to use it (e.g., use it as a group vs. individually) will lead to different kinds of data being generated (we may not have data about individuals' participation, unless we put some kind of observer with them).
 * Right now the human effort in terms of observers is quite high, although the information they provide seems the most valuable in terms of understanding the level of engagement and group functioning. Can we find alternative ways of getting similar kinds of information (e.g., using sensors)?
 * What other kinds of analysis do you think we should run on the available data?
-* What other questions would you be interested in exploring? especially, about the collaborative problem solving, and self-regulated learning aspects.
-
-* Include more specialists/researchers in CPS and SRL? we need to make more concrete RQs!
-
+* What other research questions would you be interested in exploring? Currently the collaboration/participation data seems quite rich and could provide interesting insights, but the self-regulated learning one is quite weak. Maybe we should focus on a more concrete aspect of self-regulated learning (e.g., attention, or functional reading)?
+* Related to the previous one, maybe we should include more specialists/researchers in whatever main focuses we decide, to help us make the questions more concrete and to come up with better ways of gathering data (e.g., better questionnaires)
 
 # References
