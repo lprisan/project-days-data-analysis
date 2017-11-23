@@ -1,0 +1,195 @@
+---
+title: "Observation analyses Proto-dashboard"
+author: "Luis P. Prieto"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, error = F, digits=3)
+
+inline_hook <- function(x) {
+  if (is.numeric(x)) {
+    format(x, digits = 2)
+  } else x
+}
+knitr::knit_hooks$set(inline = inline_hook)
+
+library(ggplot2)
+library(data.table)
+library(xlsx)
+library(reshape)
+library(reshape2)
+library(FactoMineR)
+library(factoextra)
+#library(GGally)
+#library(timevis)
+library(ineq)
+library(knitr)
+library(gsheet)
+library(reshape)
+#library(timeline)
+#source("../src/preprocessMultimodalTracker.R")
+
+```
+
+
+```{r preprocess, cache=TRUE}
+
+########################## OBSERVER DATA
+# The data file(s)
+#obs_datafile <- "../data/raw/20171011/Observer sheet - Linnaruum (Responses).xlsx"
+#obs_data <- read.xlsx(obs_datafile, sheetIndex = 1)
+obs_url <- "https://docs.google.com/spreadsheets/d/1EoAfPj2hFcmlHo2ndfunLV4krkgJ2a69KlCi5NoYp0k/edit"
+
+obs_data <- read.csv(text=gsheet2text(obs_url, format='csv'), stringsAsFactors=FALSE)
+
+names(obs_data)[1:2] <- c("timestamp", "group")
+names(obs_data)[3:(ncol(obs_data)-1)] <- paste("Student",toupper(letters[1:(ncol(obs_data)-3)]),sep="")
+names(obs_data)[ncol(obs_data)] <- "comment"
+#Clean up empty columns
+for(i in ncol(obs_data):1){
+  if(sum(complete.cases(obs_data[i]))==0 || sum(obs_data[i]!="")==0 || sum(obs_data[i]!="")==1) obs_data <- obs_data[,-i]
+}
+
+# Cleanup invalid data, before 10am like "2017-10-11 09:44:49 GMT"
+#obs_data <- obs_data[obs_data$timestamp>as.POSIXct("2017-10-11 10:00:00 GMT", origin = "1970-01-01", tz = "GMT"),]
+
+# Student view of the observations
+student_obs <- melt(obs_data, id=1:2, measure=3:(ncol(obs_data)-1))
+student_obs$disengaged <- as.numeric(grepl(pattern = "disengaged", x = student_obs$value, fixed = TRUE))
+student_obs$looking <- as.numeric(grepl(pattern = "Looking", x = student_obs$value, fixed = TRUE))
+student_obs$talking <- as.numeric(grepl(pattern = "Talking", x = student_obs$value, fixed = TRUE))
+student_obs$technology <- as.numeric(grepl(pattern = "technology", x = student_obs$value, fixed = TRUE))
+student_obs$resources <- as.numeric(grepl(pattern = "resources", x = student_obs$value, fixed = TRUE))
+student_obs$external <- as.numeric(grepl(pattern = "external", x = student_obs$value, fixed = TRUE))
+names(student_obs)[[3]]<-"student"
+student_obs <- student_obs[,c(1:3,5:ncol(student_obs))]
+student_obs$student.id <- paste(student_obs$group,student_obs$student)
+
+
+# summary(student_obs)
+
+
+# Group view of the observations
+group_obs <- obs_data[,c("timestamp","group","comment")]
+ag_dis <- aggregate(disengaged ~ timestamp+group, data=student_obs, FUN=sum)
+ag_look <- aggregate(looking ~ timestamp+group, data=student_obs, FUN=sum)
+ag_talk <- aggregate(talking ~ timestamp+group, data=student_obs, FUN=sum)
+ag_tech <- aggregate(technology ~ timestamp+group, data=student_obs, FUN=sum)
+ag_res <- aggregate(resources ~ timestamp+group, data=student_obs, FUN=sum)
+ag_ext <- aggregate(external ~ timestamp+group, data=student_obs, FUN=sum)
+
+group_obs <- merge(group_obs, ag_dis)
+group_obs <- merge(group_obs, ag_look)
+group_obs <- merge(group_obs, ag_talk)
+group_obs <- merge(group_obs, ag_tech)
+group_obs <- merge(group_obs, ag_res)
+group_obs <- merge(group_obs, ag_ext)
+group_obs <- group_obs[order(group_obs$group,group_obs$timestamp),]
+
+group_obs$group <- as.factor(group_obs$group)
+group_obs$comment <- as.character(group_obs$comment)
+# summary(group_obs)
+# names(group_obs)
+
+
+```
+
+## General observation statistics
+
+### Overall frequency of each kind of observed behavior
+
+```{r engagement-all}
+
+kable(colMeans(student_obs[4:(ncol(student_obs)-1)]))
+
+```
+
+### Per group
+
+```{r engagement-grp}
+# Engagement profile of a student
+ag_grp <- aggregate(cbind(disengaged,looking,talking,resources,external)~group, data=student_obs, FUN="mean")
+meltedgrp <- melt(ag_grp)
+ggplot(meltedgrp, aes(x=as.factor(group),y=value))+geom_bar(aes(fill = variable), position = "dodge", stat="identity")+coord_flip()+theme_minimal()
+
+```
+
+
+### Per student
+
+```{r engagement-stu}
+# Engagement profile of a student
+ag_stu <- aggregate(cbind(disengaged,looking,talking,resources,external)~student.id, data=student_obs, FUN="mean")
+meltedstu <- melt(ag_stu)
+ggplot(meltedstu, aes(x=as.factor(student.id),y=value))+geom_bar(aes(fill = variable), position = "dodge", stat="identity")+coord_flip()+theme_minimal()
+
+```
+
+### PCA analysis: Dimensions explaining most variance
+
+```{r pca-obs}
+pca.student <- PCA(student_obs[,4:(ncol(student_obs)-1)], scale.unit = TRUE, graph = FALSE)
+# Interpretation of dimensions: engagement, external focus
+student_obs$participation <- pca.student$ind$coord[,1]
+student_obs$focusext <- pca.student$ind$coord[,2]
+plot(pca.student,choix="var")
+```
+
+These two dimensions (the X and Y axes of the figure above) we can interpret as follows:
+
+1. The X axis can be how much each student (or observation, or group) is **participating** (or engaged actively) in the taks (as it correlates with using resources, talking with peers or external people). We can see that in the negative side are the disengaged behaviors, and just looking as others solve the task is almost neutral engagement.
+2. The Y axis seems to be more related to **where the attention is directed to**: towards external people (or away from the task) (positive Y axis), or towards the group or individual introspection (either talking or looking).
+
+Using these two indexes (participation and group/external focus), we can draw the profiles of each student, or each group, like below:
+
+```{r pca-grp-stu, fig.height=3, fig.width=8}
+# Graph... maybe too complex
+# fviz_pca_ind(pca.student,
+#              geom.ind = "point", # show points only (but not "text")
+#              col.ind = student_obs$group, # color by groups
+#              addEllipses = TRUE, # Concentration ellipses
+#              legend.title = "Groups", ellipse.type = "confidence", repel = T
+#              )
+#agpca <- aggregate(cbind(participation,focusext)~group, data=student_obs, FUN=mean)
+#meltpca <- melt(agpca)
+#ggplot(agpca, aes(x=participation, y=focusext, col=group))+geom_point(size=3)
+
+meltpca <- melt(student_obs, id.vars = c("group","student.id"), measure.vars = c("participation","focusext"))
+
+# Optional: filter only groups 2 and 6 for comparison
+#filteredpca <- meltpca[meltpca$group=="Group 2" | meltpca$group == "Group 6",] 
+
+#ggplot(filteredpca, aes(y=value, x=group, fill=group))+geom_violin()+geom_boxplot(alpha=0.1)+facet_wrap(~variable)+coord_flip()
+ggplot(meltpca, aes(y=value, x=group, fill=group))+geom_violin()+geom_boxplot(alpha=0.1)+facet_wrap(~variable)+coord_flip()+theme_minimal()
+
+```
+
+We can also see, for example, how the engagement varied over time, for each group:
+
+```{r pca-time}
+#filteredobs <- student_obs[student_obs$group=="Group 1" | student_obs$group=="Group 4",]
+#ggplot(filteredobs, aes(x=timestamp, y=participation, col=group))+geom_smooth(span = 0.15, se=F)+theme_minimal()+geom_point(alpha=0.1,size=4)
+student_obs$timestamp <- as.POSIXct(strptime(student_obs$timestamp, "%d/%m/%Y %H:%M:%S"), origin = "1970-01-01", tz = "GMT")
+ggplot(student_obs, aes(x=timestamp, y=participation, col=group))+
+  geom_smooth(span=0.25, se=F)+
+  theme_minimal()
+  #geom_point(alpha=0.1,size=4)
+```
+
+
+### Equality (in engagement, in individual contribution)
+
+A common feature in the study of collaborative learning and problem-solving is to look at equal participation (e.g., the absence of free-riders or otherwise passive members of the group). This equality can be measured using the [Gini coefficient](https://en.wikipedia.org/wiki/Gini_coefficient), which goes from zero (perfect equality) to one (total inequality, one member doing all the work). 
+
+```{r gini-grp}
+
+ag_part <- aggregate(participation~student.id+group, data = student_obs, FUN=mean)
+ag_part$participation <- ag_part$participation-min(ag_part$participation) # We make the values all positive
+ag_gini2 <- aggregate(participation~group, data=ag_part, FUN=ineq)
+names(ag_gini2)[2] <- "participation inequality"
+kable(ag_gini2)
+
+
+# TODO: separate the activities in 10-20 temporal bins and do Gini coeff over time?
+```
