@@ -1,0 +1,215 @@
+---
+title: "dashboardProjectDays"
+author: "Luis P. Prieto"
+date: "8 de enero de 2018"
+output: 
+  flexdashboard::flex_dashboard
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(Hmisc)
+library(knitr)
+library(gsheet)
+library(tidyr)
+library(dplyr)
+library(data.table)
+library(rvest)
+library(ggplot2)
+library(ineq)
+#library(syuzhet)
+#library(tm)
+#library(wordcloud)
+#library(SnowballC)
+#library(stringi)
+#library(stringr)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+url_obs <- ""
+url_quest <- ""
+
+pollSpreadsheet <- function(url, namesCol=NULL, factors=NULL){
+  data <- reactivePoll(5000, session,
+                     readLastTimestamp <- function(){
+                        # We read the latest response timestamp
+                        data <- as.data.frame(gsheet2tbl(url))
+                        if(nrow(data)>0 & ncol(data)>1){
+                          data[nrow(data),1]
+                        }else{
+                          ""
+                        }
+                      },
+                     readValue <- function(){
+                        data <- as.data.frame(gsheet2tbl(url))
+                        #We clean it up a bit
+                        if(!is.null(namesCol) & length(namesCol)>0){
+                          names(data) <- namesCol 
+                        }
+                        if(!is.null(factors) & length(factors)>0){
+                          for(f in factors){
+                            data[,f] <- as.factor(data[,f])
+                          }  
+                        }
+                        data
+                      })
+  data
+}
+
+
+ObsData <- pollSpreadsheet(url_obs)#, 
+                          #c("Timestamp","Checkboxes","Name")) #TODO: put column names
+
+ObD <- reactive({
+  data <- ObsData()
+  data
+})
+
+QueData <- pollSpreadsheet(url_quest)#, 
+                          #c("Timestamp","Checkboxes","Name")) #TODO: put column names
+
+QuD <- reactive({
+  data <- QueData()
+  data
+})
+
+
+processObservationData <- function(data, 
+                                   nrlevels=6, 
+                                   date=as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
+                                   project="Isle", 
+                                   activitycol=T){
+  
+  obs_data <- data
+  
+  if(!activitycol){
+    names(obs_data)[1:2] <- c("timestamp", "group")
+    names(obs_data)[3:(ncol(obs_data)-1)] <- paste("Student",toupper(letters[1:(ncol(obs_data)-3)]),sep="")
+    names(obs_data)[ncol(obs_data)] <- "comment"
+  }else{
+    names(obs_data)[1:3] <- c("timestamp", "group", "activity")
+    names(obs_data)[4:(ncol(obs_data)-1)] <- paste("Student",toupper(letters[1:(ncol(obs_data)-4)]),sep="")
+    names(obs_data)[ncol(obs_data)] <- "comment"
+  }
+  #Clean up empty columns
+  for(i in ncol(obs_data):1){
+    if(sum(complete.cases(obs_data[i]))==0 || sum(obs_data[i]!="")==0 || sum(obs_data[i]!="")==1) obs_data <- obs_data[,-i]
+  }
+  
+  # Cleanup invalid data, before 10am like "2017-10-11 09:44:49 GMT"
+  #obs_data <- obs_data[obs_data$timestamp>as.POSIXct("2017-10-11 10:00:00 GMT", origin = "1970-01-01", tz = "GMT"),]
+  
+  # Student view of the observations
+  if(!activitycol){
+    student_obs <- melt(obs_data, id=1:2, measure=3:(ncol(obs_data)-1))
+    names(student_obs)[[3]]<-"student"
+  }else{
+    student_obs <- melt(obs_data, id=1:3, measure=4:(ncol(obs_data)-1))
+    names(student_obs)[[4]]<-"student"
+  }
+  student_obs$disengaged <- as.numeric(grepl(pattern = "disengaged", x = student_obs$value, fixed = TRUE))
+  student_obs$looking <- as.numeric(grepl(pattern = "Looking", x = student_obs$value, fixed = TRUE))
+  student_obs$talking <- as.numeric(grepl(pattern = "Talking", x = student_obs$value, fixed = TRUE))
+  student_obs$technology <- as.numeric(grepl(pattern = "technology", x = student_obs$value, fixed = TRUE))
+  student_obs$resources <- as.numeric(grepl(pattern = "resources", x = student_obs$value, fixed = TRUE))
+  student_obs$external <- as.numeric(grepl(pattern = "external", x = student_obs$value, fixed = TRUE))
+  student_obs$student.id <- paste(student_obs$group,student_obs$student)
+
+  if(!activitycol){
+    student_obs <- student_obs[,c(1:3,5:ncol(student_obs))]
+  }else{
+    student_obs <- student_obs[,c(1:4,6:ncol(student_obs))]
+  }
+  
+  # summary(student_obs)
+  
+  student_obs$project <- project
+  student_obs$date <- date
+
+  student_obs$global.id <- paste(student_obs$project,student_obs$date,student_obs$student.id)
+  
+  student_obs  
+}
+
+
+
+#TODO: fit the MCA and project over live data?
+
+```
+
+Overall
+=====================================  
+
+
+    
+Column 1 
+-------------------------------------
+
+### Observations
+
+```{r}
+renderValueBox({
+              data <- ObD()
+              message="0 observations"
+              if(nrow(data)>0){
+                message <- paste(nrow(data),"observations\nFor",length(unique(data$group)),"groups")
+                
+              }
+              valueBox(
+                value=message,
+                icon = "fa-microphone",
+                color="primary")
+                })
+
+```
+
+
+### Observed engagement
+
+TODO: Add results from the MCA fit prediction
+
+
+Column 2
+-------------------------------------
+
+Note the use of the `height` parameter to determine how much vertical space the embedded application should occupy.
+
+You can also use the `shinyApp` function to define an application inline rather then in an external directory.
+
+In all of R code chunks above the `echo = FALSE` attribute is used. This is to prevent the R code within the chunk from rendering in the document alongside the Shiny components.
+
+
+
+Per group
+=====================================  
+
+
+    
+Column 1 
+-------------------------------------
+
+
+
+It's also possible to embed an entire Shiny application within an R Markdown document using the `shinyAppDir` function. This example embeds a Shiny application located in another directory:
+
+```{r tabsets, echo=FALSE}
+shinyAppDir(
+  system.file("examples/06_tabsets", package = "shiny"),
+  options = list(
+    width = "100%", height = 550
+  )
+)
+```
+
+Column 2
+-------------------------------------
+
+Note the use of the `height` parameter to determine how much vertical space the embedded application should occupy.
+
+You can also use the `shinyApp` function to define an application inline rather then in an external directory.
+
+In all of R code chunks above the `echo = FALSE` attribute is used. This is to prevent the R code within the chunk from rendering in the document alongside the Shiny components.
+
+
+
