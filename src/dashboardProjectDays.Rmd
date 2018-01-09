@@ -1,5 +1,5 @@
 ---
-title: "dashboardProjectDays"
+title: "dashboardProjectDays3"
 author: "Luis P. Prieto"
 date: "8 de enero de 2018"
 output: 
@@ -12,12 +12,13 @@ library(flexdashboard)
 library(Hmisc)
 library(knitr)
 library(gsheet)
-library(tidyr)
-library(dplyr)
 library(data.table)
-library(rvest)
 library(ggplot2)
 library(ineq)
+library("FactoMineR")
+library("factoextra")
+library(lubridate)
+
 #library(syuzhet)
 #library(tm)
 #library(wordcloud)
@@ -25,7 +26,7 @@ library(ineq)
 #library(stringi)
 #library(stringr)
 
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 
 # Observations spreadsheet
 url_obs <- "https://docs.google.com/spreadsheets/d/1hkkeSRYKKtlpxYAA4jEUddhkv-X5oj6gXzGPKobA5Wc/edit"
@@ -63,15 +64,11 @@ pollSpreadsheet <- function(url, namesCol=NULL, factors=NULL){
 ObsData <- pollSpreadsheet(url_obs, 
                           c("timestamp","group","activity",
                             "StudentA","StudentB","StudentC",
-                            "StudentD","StudentE","comment")) #TODO: put column names
+                            "StudentD","StudentE","comment","observer"))
 
 ObD <- reactive({
   d <- ObsData()
-  data <- data.frame()
-  if(nrow(d)!=0){
-    data <- processObservationData()
-  }
-  data
+  d
 })
 
 QueData <- pollSpreadsheet(url_quest, 
@@ -89,34 +86,36 @@ processObservationData <- function(data,
                                    nrlevels=6, 
                                    date=as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
                                    project="Isle", 
-                                   activitycol=T){
+                                   activitycol=T,
+                                   observercol=T){
   
   obs_data <- data
   
-  # if(!activitycol){
-  #   names(obs_data)[1:2] <- c("timestamp", "group")
-  #   names(obs_data)[3:(ncol(obs_data)-1)] <- paste("Student",toupper(letters[1:(ncol(obs_data)-3)]),sep="")
-  #   names(obs_data)[ncol(obs_data)] <- "comment"
-  # }else{
-  #   names(obs_data)[1:3] <- c("timestamp", "group", "activity")
-  #   names(obs_data)[4:(ncol(obs_data)-1)] <- paste("Student",toupper(letters[1:(ncol(obs_data)-4)]),sep="")
-  #   names(obs_data)[ncol(obs_data)] <- "comment"
-  # }
   #Clean up empty columns
-  for(i in ncol(obs_data):1){
-    if(sum(complete.cases(obs_data[i]))==0 || sum(obs_data[i]!="")==0 || sum(obs_data[i]!="")==1) obs_data <- obs_data[,-i]
-  }
+  # for(i in ncol(obs_data):1){
+  #   if(sum(complete.cases(obs_data[i]))==0 || sum(obs_data[i]!="")==0 || sum(obs_data[i]!="")==1) obs_data <- obs_data[,-i]
+  # }
   
   # Cleanup invalid data, before 10am like "2017-10-11 09:44:49 GMT"
   #obs_data <- obs_data[obs_data$timestamp>as.POSIXct("2017-10-11 10:00:00 GMT", origin = "1970-01-01", tz = "GMT"),]
   
   # Student view of the observations
-  if(!activitycol){
-    student_obs <- melt(obs_data, id=1:2, measure=3:(ncol(obs_data)-1))
-    names(student_obs)[[3]]<-"student"
+  if(observercol){
+    if(!activitycol){
+      student_obs <- melt(obs_data, id=c(1:2,ncol(obs_data)), measure=3:(ncol(obs_data)-2))
+      names(student_obs)[[4]]<-"student"
+    }else{
+      student_obs <- melt(obs_data, id=c(1:3,ncol(obs_data)), measure=4:(ncol(obs_data)-2))
+      names(student_obs)[[5]]<-"student"
+    }
   }else{
-    student_obs <- melt(obs_data, id=1:3, measure=4:(ncol(obs_data)-1))
-    names(student_obs)[[4]]<-"student"
+    if(!activitycol){
+      student_obs <- melt(obs_data, id=1:2, measure=3:(ncol(obs_data)-1))
+      names(student_obs)[[3]]<-"student"
+    }else{
+      student_obs <- melt(obs_data, id=1:3, measure=4:(ncol(obs_data)-1))
+      names(student_obs)[[4]]<-"student"
+    }
   }
   student_obs$disengaged <- as.numeric(grepl(pattern = "disengaged", x = student_obs$value, fixed = TRUE))
   student_obs$looking <- as.numeric(grepl(pattern = "Looking", x = student_obs$value, fixed = TRUE))
@@ -126,12 +125,19 @@ processObservationData <- function(data,
   student_obs$external <- as.numeric(grepl(pattern = "external", x = student_obs$value, fixed = TRUE))
   student_obs$student.id <- paste(student_obs$group,student_obs$student)
 
-  if(!activitycol){
-    student_obs <- student_obs[,c(1:3,5:ncol(student_obs))]
+  if(observercol){
+    if(!activitycol){
+      student_obs <- student_obs[,c(1:4,6:ncol(student_obs))]
+    }else{
+      student_obs <- student_obs[,c(1:5,7:ncol(student_obs))]
+    }
   }else{
-    student_obs <- student_obs[,c(1:4,6:ncol(student_obs))]
+    if(!activitycol){
+      student_obs <- student_obs[,c(1:3,5:ncol(student_obs))]
+    }else{
+      student_obs <- student_obs[,c(1:4,6:ncol(student_obs))]
+    }
   }
-  
   # summary(student_obs)
   
   student_obs$project <- project
@@ -144,7 +150,17 @@ processObservationData <- function(data,
 
 
 
-#TODO: fit the MCA and project over live data?
+# fit the MCA and project over live data?
+# Data from previous days
+df <- get(load("obsdata.Rdata"))
+datamca <- df[,4:9]
+for(i in 1:ncol(datamca)){
+  datamca[,i] <- as.factor(datamca[,i])
+}
+res.mca <- MCA(datamca, graph = F)
+df$engagement <-res.mca$ind$coord[,1]
+df$offtask <- res.mca$ind$coord[,2]
+
 
 ```
 
@@ -156,14 +172,109 @@ Overall
 Column 1 
 -------------------------------------
 
+### Observed engagement
+
+```{r}
+
+renderPlot({
+  d <- ObD()
+  data <- data.frame()
+  if(nrow(d)!=0){
+    data <- processObservationData(d)
+  }
+  
+  if(nrow(data)>1){ # at least, two points to plot
+    # Predict engagement and offtask fro the available data
+    newdata <- data[,6:11]
+    for(i in 1:ncol(newdata)){
+      newdata[,i] <- as.factor(newdata[,i])
+    }
+    
+    #To match factors, do mca on newdata and get the prediction data from the object, with olddata <- object$call$X[,rownames(object$var$eta),drop=FALSE]
+    dummy.mca <- MCA(newdata, graph = F)
+    newdata2 <- dummy.mca$call$X[,rownames(dummy.mca$var$eta),drop=FALSE]
+    pred <- predict.MCA(res.mca, newdata2)
+    data$engagement <- pred$coord[,1]
+    data$offtask <- pred$coord[,2]
+    
+    data$time <- as.POSIXct(strptime(data$timestamp, "%d/%m/%Y %H:%M:%S"))
+    data$timeofday <- as.POSIXct(strptime(paste(hour(data$time),
+                                                minute(data$time),
+                                                second(data$time), sep=":"),
+                                          "%H:%M:%S"))
+
+    ggplot(data, aes(x=timeofday, y=engagement, color=group))+
+      geom_smooth(se=F)+theme_minimal()+geom_point(alpha=0.2)+ggtitle("Engagement")
+
+  }
+  
+})
+
+```
+
+
+Column 2 
+-------------------------------------
+
+### Engagement inequality 
+
+(higher values may signal collaboration problems, e.g., only some group members engaged in the activity)
+
+```{r}
+
+renderPlot({
+  d <- ObD()
+  data <- data.frame()
+  if(nrow(d)!=0){
+    data <- processObservationData(d)
+  }
+  
+  if(nrow(data)>1){ # at least, two points to plot
+    # Predict engagement and offtask fro the available data
+    newdata <- data[,6:11]
+    for(i in 1:ncol(newdata)){
+      newdata[,i] <- as.factor(newdata[,i])
+    }
+    
+    #To match factors, do mca on newdata and get the prediction data from the object, with olddata <- object$call$X[,rownames(object$var$eta),drop=FALSE]
+    dummy.mca <- MCA(newdata, graph = F)
+    newdata2 <- dummy.mca$call$X[,rownames(dummy.mca$var$eta),drop=FALSE]
+    pred <- predict.MCA(res.mca, newdata2)
+    data$engagement <- pred$coord[,1]
+    data$offtask <- pred$coord[,2]
+    
+    data$time <- as.POSIXct(strptime(data$timestamp, "%d/%m/%Y %H:%M:%S"))
+    data$timeofday <- as.POSIXct(strptime(paste(hour(data$time),
+                                                minute(data$time),
+                                                second(data$time), sep=":"),
+                                          "%H:%M:%S"))
+
+    data$engagement2 <- data$engagement-min(data$engagement) # We make the values all positive
+    bygroup.ineq <- aggregate(engagement2 ~ timeofday+group, data=data, Gini)
+    ggplot(bygroup.ineq, aes(x=timeofday, y=engagement2, color=group))+theme_minimal()+
+        geom_smooth(se=F)+ggtitle("Inequality")+geom_point(alpha=0.2)+ylim(0,1)
+
+    
+
+  }
+  
+})
+
+```
+
+
 ### Observations
 
 ```{r}
 renderValueBox({
-              data <- ObD()
+              d <- ObD()
+              data <- data.frame()
+              if(nrow(d)!=0){
+                data <- processObservationData(d)
+              }
               message="0 observations"
               if(nrow(data)>0){
-                message <- paste(nrow(data),"observations\nFor",length(unique(data$group)),"groups")
+                message <- paste(nrow(d),"obs. for",length(unique(data$group)),"groups")
                 
               }
               valueBox(
@@ -173,53 +284,3 @@ renderValueBox({
                 })
 
 ```
-
-
-### Observed engagement
-
-TODO: Add results from the MCA fit prediction
-
-
-Column 2
--------------------------------------
-
-Note the use of the `height` parameter to determine how much vertical space the embedded application should occupy.
-
-You can also use the `shinyApp` function to define an application inline rather then in an external directory.
-
-In all of R code chunks above the `echo = FALSE` attribute is used. This is to prevent the R code within the chunk from rendering in the document alongside the Shiny components.
-
-
-
-Per group
-=====================================  
-
-
-    
-Column 1 
--------------------------------------
-
-
-
-It's also possible to embed an entire Shiny application within an R Markdown document using the `shinyAppDir` function. This example embeds a Shiny application located in another directory:
-
-```{r tabsets, echo=FALSE}
-shinyAppDir(
-  system.file("examples/06_tabsets", package = "shiny"),
-  options = list(
-    width = "100%", height = 550
-  )
-)
-```
-
-Column 2
--------------------------------------
-
-Note the use of the `height` parameter to determine how much vertical space the embedded application should occupy.
-
-You can also use the `shinyApp` function to define an application inline rather then in an external directory.
-
-In all of R code chunks above the `echo = FALSE` attribute is used. This is to prevent the R code within the chunk from rendering in the document alongside the Shiny components.
-
-
-

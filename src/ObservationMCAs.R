@@ -177,6 +177,8 @@ ggplot(df, aes(x=timeofday, y=engagement, color=group))+geom_point(alpha=0.3)+
   geom_smooth(span=0.2, se=F)+facet_wrap(~date)+theme_minimal()
 ggplot(df, aes(x=group, y=engagement, fill=group))+geom_boxplot()+
   facet_wrap(~date)+theme_minimal()
+ggplot(df, aes(x=engagement, y=offtask))+geom_jitter(width=0.2, height=0.2, alpha=0.1)+
+  theme_minimal()
 
 # MCA plots of different dates
 for(d in unique(as.character(df$date))){
