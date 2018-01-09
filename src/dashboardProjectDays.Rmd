@@ -27,8 +27,10 @@ library(ineq)
 
 knitr::opts_chunk$set(echo = TRUE)
 
-url_obs <- ""
-url_quest <- ""
+# Observations spreadsheet
+url_obs <- "https://docs.google.com/spreadsheets/d/1hkkeSRYKKtlpxYAA4jEUddhkv-X5oj6gXzGPKobA5Wc/edit"
+# Student feedback spreadsheet
+url_quest <- "https://docs.google.com/spreadsheets/d/1o-JBf9MeReo8ob8LT80OfE3_ZQwFG5Xi9AJtRkxSRUc/edit"
 
 pollSpreadsheet <- function(url, namesCol=NULL, factors=NULL){
   data <- reactivePoll(5000, session,
@@ -58,16 +60,24 @@ pollSpreadsheet <- function(url, namesCol=NULL, factors=NULL){
 }
 
 
-ObsData <- pollSpreadsheet(url_obs)#, 
-                          #c("Timestamp","Checkboxes","Name")) #TODO: put column names
+ObsData <- pollSpreadsheet(url_obs, 
+                          c("timestamp","group","activity",
+                            "StudentA","StudentB","StudentC",
+                            "StudentD","StudentE","comment")) #TODO: put column names
 
 ObD <- reactive({
-  data <- ObsData()
+  d <- ObsData()
+  data <- data.frame()
+  if(nrow(d)!=0){
+    data <- processObservationData()
+  }
   data
 })
 
-QueData <- pollSpreadsheet(url_quest)#, 
-                          #c("Timestamp","Checkboxes","Name")) #TODO: put column names
+QueData <- pollSpreadsheet(url_quest, 
+                          c("timestamp","group","student","activity","contribution",
+                            "difficulty","preparedness","satisfaction","relevance",
+                            "collab.challenges","skill.gaps")) #TODO: put column names
 
 QuD <- reactive({
   data <- QueData()
@@ -83,15 +93,15 @@ processObservationData <- function(data,
   
   obs_data <- data
   
-  if(!activitycol){
-    names(obs_data)[1:2] <- c("timestamp", "group")
-    names(obs_data)[3:(ncol(obs_data)-1)] <- paste("Student",toupper(letters[1:(ncol(obs_data)-3)]),sep="")
-    names(obs_data)[ncol(obs_data)] <- "comment"
-  }else{
-    names(obs_data)[1:3] <- c("timestamp", "group", "activity")
-    names(obs_data)[4:(ncol(obs_data)-1)] <- paste("Student",toupper(letters[1:(ncol(obs_data)-4)]),sep="")
-    names(obs_data)[ncol(obs_data)] <- "comment"
-  }
+  # if(!activitycol){
+  #   names(obs_data)[1:2] <- c("timestamp", "group")
+  #   names(obs_data)[3:(ncol(obs_data)-1)] <- paste("Student",toupper(letters[1:(ncol(obs_data)-3)]),sep="")
+  #   names(obs_data)[ncol(obs_data)] <- "comment"
+  # }else{
+  #   names(obs_data)[1:3] <- c("timestamp", "group", "activity")
+  #   names(obs_data)[4:(ncol(obs_data)-1)] <- paste("Student",toupper(letters[1:(ncol(obs_data)-4)]),sep="")
+  #   names(obs_data)[ncol(obs_data)] <- "comment"
+  # }
   #Clean up empty columns
   for(i in ncol(obs_data):1){
     if(sum(complete.cases(obs_data[i]))==0 || sum(obs_data[i]!="")==0 || sum(obs_data[i]!="")==1) obs_data <- obs_data[,-i]
