@@ -18,6 +18,7 @@ library(ineq)
 library("FactoMineR")
 library("factoextra")
 library(lubridate)
+library(mgcv)
 
 #library(syuzhet)
 #library(tm)
@@ -28,10 +29,19 @@ library(lubridate)
 
 knitr::opts_chunk$set(echo = FALSE)
 
-# Observations spreadsheet
-url_obs <- "https://docs.google.com/spreadsheets/d/1hkkeSRYKKtlpxYAA4jEUddhkv-X5oj6gXzGPKobA5Wc/edit"
-# Student feedback spreadsheet
-url_quest <- "https://docs.google.com/spreadsheets/d/1o-JBf9MeReo8ob8LT80OfE3_ZQwFG5Xi9AJtRkxSRUc/edit"
+# Observations spreadsheet # 10.01
+# url_obs <- "https://docs.google.com/spreadsheets/d/1hkkeSRYKKtlpxYAA4jEUddhkv-X5oj6gXzGPKobA5Wc/edit"
+# Observations spreadsheet # 15.01
+url_obs <- "https://docs.google.com/spreadsheets/d/15nRUUpDSBWBUDgXDDizf6Ij50fLlDDp1f3xj_kRbLP0/edit"
+
+
+# Student feedback spreadsheet # 10.01
+# url_quest <- "https://docs.google.com/spreadsheets/d/1o-JBf9MeReo8ob8LT80OfE3_ZQwFG5Xi9AJtRkxSRUc/edit"
+# Student feedback spreadsheet # 15.01
+url_quest <- "https://docs.google.com/spreadsheets/d/11cDBX25XCJq89UdmWydXEfMvdHcA4xG-jhbSBgxEnQw/edit"
+
+# Does todays observer questionnaire have the question about obs.id?
+obscol=F
 
 pollSpreadsheet <- function(url, namesCol=NULL, factors=NULL){
   data <- reactivePoll(5000, session,
@@ -64,7 +74,7 @@ pollSpreadsheet <- function(url, namesCol=NULL, factors=NULL){
 ObsData <- pollSpreadsheet(url_obs, 
                           c("timestamp","group","activity",
                             "StudentA","StudentB","StudentC",
-                            "StudentD","StudentE","comment","observer"))
+                            "StudentD","StudentE","comment"))#,"observer"))
 
 ObD <- reactive({
   d <- ObsData()
@@ -180,12 +190,15 @@ renderPlot({
   d <- ObD()
   data <- data.frame()
   if(nrow(d)!=0){
-    data <- processObservationData(d)
+    data <- processObservationData(d, observercol = obscol)
   }
-  
   if(nrow(data)>1){ # at least, two points to plot
     # Predict engagement and offtask fro the available data
-    newdata <- data[,6:11]
+    if(obscol){
+      newdata <- data[,6:11]
+    }else{
+      newdata <- data[,5:10]
+    }
     for(i in 1:ncol(newdata)){
       newdata[,i] <- as.factor(newdata[,i])
     }
@@ -204,7 +217,11 @@ renderPlot({
                                           "%H:%M:%S"))
 
     ggplot(data, aes(x=timeofday, y=engagement, color=group))+
-      geom_smooth(se=F)+theme_minimal()+geom_point(alpha=0.2)+ggtitle("Engagement")
+      geom_smooth(span=0.3, se=F)+
+      geom_smooth(aes( group = 1 ), span=0.3, se=F, color="black", size=1.5) +
+      #geom_smooth(method = "lm", formula = y ~ splines::bs(x, 3), se = FALSE)+
+      #geom_smooth(method = "gam", formula = y ~ s(x, k=3), se = FALSE)+
+      theme_minimal()+geom_point(alpha=0.2)+ggtitle("Engagement")
 
   }
   
@@ -226,12 +243,16 @@ renderPlot({
   d <- ObD()
   data <- data.frame()
   if(nrow(d)!=0){
-    data <- processObservationData(d)
+    data <- processObservationData(d, observercol = obscol)
   }
   
   if(nrow(data)>1){ # at least, two points to plot
     # Predict engagement and offtask fro the available data
-    newdata <- data[,6:11]
+    if(obscol){
+      newdata <- data[,6:11]
+    }else{
+      newdata <- data[,5:10]
+    }
     for(i in 1:ncol(newdata)){
       newdata[,i] <- as.factor(newdata[,i])
     }
@@ -251,8 +272,13 @@ renderPlot({
 
     data$engagement2 <- data$engagement-min(data$engagement) # We make the values all positive
     bygroup.ineq <- aggregate(engagement2 ~ timeofday+group, data=data, Gini)
-    ggplot(bygroup.ineq, aes(x=timeofday, y=engagement2, color=group))+theme_minimal()+
-        geom_smooth(se=F)+ggtitle("Inequality")+geom_point(alpha=0.2)+ylim(0,1)
+    ggplot(bygroup.ineq, aes(x=timeofday, y=engagement2, color=group))+
+      theme_minimal()+
+      geom_smooth(span=0.4, se=F)+
+      geom_smooth(aes( group = 1 ), span=0.4, se=F, color="black", size=1.5) +
+      #geom_smooth(method = "lm", formula = y ~ splines::bs(x, 3), se = FALSE)+
+      #geom_smooth(method = "gam", formula = y ~ s(x, k=3), se = FALSE)+
+      ggtitle("Inequality")+geom_point(alpha=0.2)+ylim(0,1)
 
     
 
@@ -270,7 +296,7 @@ renderValueBox({
               d <- ObD()
               data <- data.frame()
               if(nrow(d)!=0){
-                data <- processObservationData(d)
+                data <- processObservationData(d, observercol = F)
               }
               message="0 observations"
               if(nrow(data)>0){
