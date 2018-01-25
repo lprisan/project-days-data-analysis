@@ -1,0 +1,382 @@
+---
+title: "Mysterious Island -- Our data from multiple sources"
+author: "Luis P. Prieto"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r helpers}
+library(gsheet)
+library(ggplot2)
+library(wordcloud)
+library(Hmisc)
+library(tm)
+library(SnowballC)
+library(knitr)
+
+# Some helper functions
+source("../src/processObservationData.R")
+source("../src/processFinalTaskData.R")
+```
+
+```{r datasources}
+
+# We define and get the data from all our data sources, and merge it into master tables for convenience
+
+# Observer sheets
+url_obs1 = "https://docs.google.com/spreadsheets/d/1FSqm57ygxaIFa5V5oUCx7ht21ayuxMm7MO2IeczZ7ww/edit#gid=1838199304"
+url_obs2 = "https://docs.google.com/spreadsheets/d/13Od5UuY5LLh2E5EPVD17IP6dO3x_xTpxyVYg9BQmIdE/edit#gid=140638193"
+url_obs3 = "https://docs.google.com/spreadsheets/d/1hkkeSRYKKtlpxYAA4jEUddhkv-X5oj6gXzGPKobA5Wc/edit#gid=2089592913"
+url_obs4 = NULL # No observation done! See quali observation in PDF file...
+
+# Individual activity feedback
+url_ind1 = "https://docs.google.com/spreadsheets/d/1NbsjX7vQqgfCKmTJQ-9Zs3zj2dU0CrnMBavXy9qZfqc/edit#gid=76827960"
+url_ind2 = "https://docs.google.com/spreadsheets/d/13GZK27me6PYfo7AitvIvWVR_RmhhVP6ypGgc_VaqH2s/edit#gid=1439210366"
+url_ind3 = "https://docs.google.com/spreadsheets/d/1o-JBf9MeReo8ob8LT80OfE3_ZQwFG5Xi9AJtRkxSRUc/edit#gid=1834453828"
+url_ind4 = "https://docs.google.com/spreadsheets/d/11cDBX25XCJq89UdmWydXEfMvdHcA4xG-jhbSBgxEnQw/edit#gid=1341825476"
+
+# Final day feedback
+url_fin1 = "https://docs.google.com/spreadsheets/d/1v2E-FQMl4t2qJAAc3Vg8Qo6-7-W_Ajq5ja89QBPk4Fs/edit#gid=1280693886"
+url_fin2 = "https://docs.google.com/spreadsheets/d/1JjXYqMGQmTKbAW9q_u7Rl9LWgglIOiVGVKU6iBTijl0/edit#gid=1575889659"
+url_fin3 = "https://docs.google.com/spreadsheets/d/1CRUVSsgMcNdJ_kWf3T9aQfMvh3rSQe94fzZMoepOMvw/edit#gid=241912863"
+url_fin4 = "https://docs.google.com/spreadsheets/d/1AyTGEA_Sb69Sf-m0HaiAczhr9jjjiFo57yJQVtHetIo/edit#gid=814282282"
+
+# Graasp logs
+
+# Other sources (e.g., multimodal tracker, student-generated artifacts from Graasp)?
+
+
+```
+
+The data we have:
+
+* Observations: every 5min, both quantitative (how each student is engaged) and qualitative (what is happening generally with the group)
+* Individual activity student feedback: satisfaction, difficulty, collaboration self-report after each of the activities
+* Final whole-day student feedback: overall satisfaction, suggestions for activities, etc.
+* Logs from activity in Graasp (when students connected, responded, accessed, etc.)
+* Artifacts from Graasp (e.g., student responses)
+
+```{r preprocess}
+
+# Download, parse and merge
+# Observations
+rawobs1 <- as.data.frame(gsheet2tbl(url_obs1))
+obs1 <- processObservationData(rawobs1, 
+                               date = as.POSIXct(strptime("06-12-2017", "%d-%m-%Y")),
+                               observercol = F)
+rawobs2 <- as.data.frame(gsheet2tbl(url_obs2))
+obs2 <- processObservationData(rawobs2, 
+                               date = as.POSIXct(strptime("13-12-2017", "%d-%m-%Y")),
+                               observercol = F)
+rawobs3 <- as.data.frame(gsheet2tbl(url_obs3))
+obs3 <- processObservationData(rawobs3, 
+                               date = as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
+                               observercol = T,
+                               namecols=c("timestamp","group","activity",
+                                              "StudentA","StudentB","StudentC",
+                                              "StudentD","StudentE","comment","observer"))
+obs <- rbind(obs1,obs2)
+obs <- merge(obs, obs3,all = T)
+obs$timestamp <- as.POSIXct(strptime(obs$timestamp, "%d/%m/%Y %H:%M:%S"))
+obs <- obs[ order(obs$timestamp), ]
+
+# Individual activity fb
+rawind1 <- as.data.frame(gsheet2tbl(url_ind1))
+names(rawind1) <- c("timestamp", "group", "student", "activity", "contribution",
+                    "difficulty", "preparedness", "satisfaction", "relevant", 
+                    "collab.challenges", "skill.gap")
+rawind2 <- as.data.frame(gsheet2tbl(url_ind2))
+names(rawind2) <- c("timestamp", "group", "student", "activity", "contribution",
+                    "difficulty", "preparedness", "satisfaction", "relevant", 
+                    "collab.challenges", "skill.gap")
+rawind3 <- as.data.frame(gsheet2tbl(url_ind3))
+names(rawind3) <- c("timestamp", "group", "student", "activity", "contribution",
+                    "difficulty", "preparedness", "satisfaction", "relevant", 
+                    "collab.challenges", "skill.gap")
+rawind4 <- as.data.frame(gsheet2tbl(url_ind4))
+names(rawind4) <- c("timestamp", "group", "student", "activity", "contribution",
+                    "difficulty", "preparedness", "satisfaction", "relevant", 
+                    "collab.challenges", "skill.gap")
+ind <- rbind(rawind1, rawind2, rawind3, rawind4)
+ind$timestamp <- as.POSIXct(strptime(ind$timestamp, "%d/%m/%Y %H:%M:%S"))
+ind <- ind[ order(ind$timestamp), ]
+# Activity names are irregular, unify
+ind$activity <- as.factor(ind$activity)
+levels(ind$activity) <- c("Hõimuneem", "Hõimuneem", "Koordinaatide org", "Koordinaatide org",
+                          "Ohukraater", "Ohukraater", "Pääsemise laht", "Pääsemise laht",
+                          "Sissejuhatus", "Suitsusignaal")
+# Dates
+ind$date <- as.factor(as.character(as.Date(ind$timestamp)))
+
+
+# Final activity fb
+rawfin1 <- as.data.frame(gsheet2tbl(url_fin1))
+names(rawfin1) <- c("timestamp", "group", "student", "strategies", "roles",
+                    "overall.satisfaction", "other.activities", "ease.instructions",
+                    "tech.problems", "other.problems")
+rawfin1$timestamp <- as.POSIXct(strptime(rawfin1$timestamp, "%m/%d/%Y %H:%M:%S")) #This date is in different format!!??
+rawfin1$timestamp <- format(rawfin1$timestamp, format = "%d/%m/%Y %H:%M%:%S")
+
+rawfin2 <- as.data.frame(gsheet2tbl(url_fin2))
+names(rawfin2) <- c("timestamp", "group", "student", "strategies", 
+                    "tasks.student.A", "tasks.student.B", "tasks.student.C", 
+                    "tasks.student.D", "tasks.student.E",
+                    "roles", "overall.satisfaction", "other.activities", 
+                    "ease.instructions", "tech.problems", "other.problems")
+fin2 <- processFinalTaskData(rawfin2)
+
+rawfin3 <- as.data.frame(gsheet2tbl(url_fin3))
+names(rawfin3) <- c("timestamp", "group", "student", "strategies", 
+                    "tasks.student.A", "tasks.student.B", "tasks.student.C", 
+                    "tasks.student.D", "tasks.student.E",
+                    "roles", "overall.satisfaction", "other.activities", 
+                    "ease.instructions", "tech.problems", "other.problems")
+fin3 <- processFinalTaskData(rawfin3)
+
+rawfin4 <- as.data.frame(gsheet2tbl(url_fin4))
+names(rawfin4) <- c("timestamp", "group", "student", "strategies", 
+                    "tasks.student.A", "tasks.student.B", "tasks.student.C", 
+                    "tasks.student.D", "tasks.student.E",
+                    "roles", "overall.satisfaction", "other.activities", 
+                    "ease.instructions", "tech.problems", "other.problems")
+fin4 <- processFinalTaskData(rawfin4)
+
+fin <- rbind(fin2, fin3, fin4)
+fin <- merge(fin, rawfin1, all=T)
+fin$timestamp <- as.POSIXct(strptime(fin$timestamp, "%d/%m/%Y %H:%M:%S"))
+fin <- fin[ order(fin$timestamp), ]
+
+```
+
+
+## Overall view of the data
+
+### Individual activity feedback
+
+
+#### Perceived difficulty
+
+Mean: `r mean(ind$difficulty)` (0-9 scale)
+
+Median: `r median(ind$difficulty)` 
+
+Std. deviation: `r sd(ind$difficulty)`
+
+
+```{r ind-difficulty}
+
+ggplot(ind, aes(x=difficulty))+geom_histogram(bins=10)+theme_minimal()+
+  scale_x_continuous(breaks=c(0:9))+
+  ggtitle("Student-perceived difficulty, overall")
+
+
+ggplot(ind, aes(x=difficulty, fill=activity))+geom_histogram(bins=10)+theme_minimal()+
+  scale_x_continuous(breaks=c(0:9))+
+  ggtitle("Student-perceived difficulty, per activity")+
+  facet_wrap(~activity)
+
+ggplot(ind, aes(x=activity, y=difficulty, fill=activity))+
+  geom_boxplot()+theme_minimal()+
+  scale_y_continuous(breaks=c(0:9))+
+  ggtitle("Distribution of student-perceived difficulty, per activity")
+
+ggplot(ind, aes(x=activity, y=difficulty, fill=activity))+
+  geom_boxplot()+theme_minimal()+
+  scale_y_continuous(breaks=c(0:9))+
+  facet_wrap(~date)+
+  ggtitle("Distribution of student-perceived difficulty, per day")
+
+```
+
+
+#### Perceived preparedness
+
+Mean: `r mean(ind$preparedness)` (0-9 scale)
+
+Median: `r median(ind$preparedness)` 
+
+Std. deviation: `r sd(ind$preparedness)`
+
+
+```{r ind-preparedness}
+
+ggplot(ind, aes(x=preparedness))+geom_histogram(bins=10)+theme_minimal()+
+  scale_x_continuous(breaks=c(0:9))+
+  ggtitle("Student-perceived preparedness, overall")
+
+
+ggplot(ind, aes(x=preparedness, fill=activity))+geom_histogram(bins=10)+theme_minimal()+
+  scale_x_continuous(breaks=c(0:9))+
+  ggtitle("Student-perceived preparedness, per activity")+
+  facet_wrap(~activity)
+
+ggplot(ind, aes(x=activity, y=preparedness, fill=activity))+
+  geom_boxplot()+theme_minimal()+
+  scale_y_continuous(breaks=c(0:9))+
+  ggtitle("Distribution of student-perceived preparedness, per activity")
+
+
+ggplot(ind, aes(x=activity, y=preparedness, fill=activity))+
+  geom_boxplot()+theme_minimal()+
+  scale_y_continuous(breaks=c(0:9))+
+  facet_wrap(~date)+
+  ggtitle("Distribution of student-perceived preparedness, per day")
+
+```
+
+
+#### Perceived satisfaction
+
+Mean: `r mean(ind$satisfaction)` (0-9 scale)
+
+Median: `r median(ind$satisfaction)` 
+
+Std. deviation: `r sd(ind$satisfaction)`
+
+
+```{r ind-satisfaction}
+
+ggplot(ind, aes(x=satisfaction))+geom_histogram(bins=10)+theme_minimal()+
+  scale_x_continuous(breaks=c(0:9))+
+  ggtitle("Student-perceived satisfaction, overall")
+
+
+ggplot(ind, aes(x=satisfaction, fill=activity))+geom_histogram(bins=10)+theme_minimal()+
+  scale_x_continuous(breaks=c(0:9))+
+  ggtitle("Student-perceived satisfaction, per activity")+
+  facet_wrap(~activity)
+
+ggplot(ind, aes(x=activity, y=satisfaction, fill=activity))+
+  geom_boxplot()+theme_minimal()+
+  scale_y_continuous(breaks=c(0:9))+
+  ggtitle("Distribution of student-perceived satisfaction, per activity")
+
+ggplot(ind, aes(x=activity, y=satisfaction, fill=activity))+
+  geom_boxplot()+theme_minimal()+
+  scale_y_continuous(breaks=c(0:9))+
+  facet_wrap(~date)+
+  ggtitle("Distribution of student-perceived satisfaction, per day")
+
+```
+
+
+
+#### Perceived relevant
+
+Mean: `r mean(ind$relevant)` (0-9 scale)
+
+Median: `r median(ind$relevant)` 
+
+Std. deviation: `r sd(ind$relevant)`
+
+
+```{r ind-relevant}
+
+ggplot(ind, aes(x=relevant))+geom_histogram(bins=10)+theme_minimal()+
+  scale_x_continuous(breaks=c(0:9))+
+  ggtitle("Student-perceived relevant, overall")
+
+
+ggplot(ind, aes(x=relevant, fill=activity))+geom_histogram(bins=10)+theme_minimal()+
+  scale_x_continuous(breaks=c(0:9))+
+  ggtitle("Student-perceived relevant, per activity")+
+  facet_wrap(~activity)
+
+ggplot(ind, aes(x=activity, y=relevant, fill=activity))+
+  geom_boxplot()+theme_minimal()+
+  scale_y_continuous(breaks=c(0:9))+
+  ggtitle("Distribution of student-perceived relevant, per activity")
+
+ggplot(ind, aes(x=activity, y=relevant, fill=activity))+
+  geom_boxplot()+theme_minimal()+
+  scale_y_continuous(breaks=c(0:9))+
+  facet_wrap(~date)+
+  ggtitle("Distribution of student-perceived relevant, per day")
+
+```
+
+#### Collaboration challenges (quali)
+
+```{r ind-coll}
+clean_vector <- function(v){
+    newv <- v[v!=""]
+    newv2 <- newv[nchar(newv)>1]
+    newv2
+}
+
+coll <- ind$collab.challenges
+d <- unlist(string.break.line(paste(coll,sep="\n")))
+d <- clean_vector(d)
+if(length(d)>0){
+  corpus <- Corpus(VectorSource(d))
+  corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, tolower)
+  #corpus <- tm_map(corpus, removeWords, stopwords("english"))
+  corpus <- tm_map(corpus, stemDocument)
+  #corpus <- tm_map(corpus, PlainTextDocument)
+  wordcloud(corpus, max.words=50, random.order=F)
+}
+
+yeses <- length(d[grepl(x=tolower(d), pattern="yes", fixed = T)])+
+  length(d[grepl(x=tolower(d), pattern="jah", fixed = T)])+
+  length(d[grepl(x=tolower(d), pattern="Да", fixed = T)])
+
+noses <- length(d[grepl(x=tolower(d), pattern="no", fixed = T)])+
+  length(d[grepl(x=tolower(d), pattern="ei", fixed = T)])+
+  length(d[grepl(x=tolower(d), pattern="нет", fixed = T)])
+  
+print(paste("Yes-like responses (faced some kind of collaboration challenge): ",yeses,"out of",nrow(ind),"responses"))
+print(paste("No-like responses (did not have collaboration problems): ",noses,"out of",nrow(ind),"responses"))
+
+dprint <- d[nchar(d)>5]
+kable(dprint, caption = "(longer) Responses")
+```
+
+
+
+
+#### Perceived missing skills (skill gap)
+
+
+```{r ind-gap}
+
+gap <- ind$skill.gap
+d <- unlist(string.break.line(paste(gap,sep="\n")))
+d <- clean_vector(d)
+if(length(d)>0){
+  corpus <- Corpus(VectorSource(d))
+  corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, tolower)
+  #corpus <- tm_map(corpus, removeWords, stopwords("english"))
+  corpus <- tm_map(corpus, stemDocument)
+  #corpus <- tm_map(corpus, PlainTextDocument)
+  wordcloud(corpus, max.words=50, random.order=F)
+}
+
+yeses <- length(d[grepl(x=tolower(d), pattern="yes", fixed = T)])+
+  length(d[grepl(x=tolower(d), pattern="jah", fixed = T)])+
+  length(d[grepl(x=tolower(d), pattern="Да", fixed = T)])
+
+noses <- length(d[grepl(x=tolower(d), pattern="no", fixed = T)])+
+  length(d[grepl(x=tolower(d), pattern="ei", fixed = T)])+
+  length(d[grepl(x=tolower(d), pattern="нет", fixed = T)])
+  
+print(paste("Yes-like responses (said they needed more skills): ",yeses,"out of",nrow(ind),"responses"))
+print(paste("No-like responses (did not need more skills): ",noses,"out of",nrow(ind),"responses"))
+
+dprint <- d[nchar(d)>5]
+kable(dprint, caption = "(longer) Responses")
+```
+
+### Final whole-day feedback
+
+### Observations
+
+
+

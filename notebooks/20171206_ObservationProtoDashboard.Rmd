@@ -40,12 +40,13 @@ library(reshape)
 #obs_datafile <- "../data/raw/20171011/Observer sheet - Linnaruum (Responses).xlsx"
 #obs_data <- read.xlsx(obs_datafile, sheetIndex = 1)
 #obs_url <- "https://docs.google.com/spreadsheets/d/1EoAfPj2hFcmlHo2ndfunLV4krkgJ2a69KlCi5NoYp0k/edit" # for 8.11 session
-obs_url <- "https://docs.google.com/spreadsheets/d/1zcq0lGaavcxjdeEOgc6uNtMGAEy_NqXg4ufmnFaUjJo/edit" # for 18.10 session
+#obs_url <- "https://docs.google.com/spreadsheets/d/1zcq0lGaavcxjdeEOgc6uNtMGAEy_NqXg4ufmnFaUjJo/edit" # for 18.10 session
+obs_url <- "https://docs.google.com/spreadsheets/d/1FSqm57ygxaIFa5V5oUCx7ht21ayuxMm7MO2IeczZ7ww/edit"
 
 obs_data <- read.csv(text=gsheet2text(obs_url, format='csv'), stringsAsFactors=FALSE)
 
-names(obs_data)[1:2] <- c("timestamp", "group")
-names(obs_data)[3:(ncol(obs_data)-1)] <- paste("Student",toupper(letters[1:(ncol(obs_data)-3)]),sep="")
+names(obs_data)[1:3] <- c("timestamp", "group", "task")
+names(obs_data)[4:(ncol(obs_data)-1)] <- paste("Student",toupper(letters[1:(ncol(obs_data)-3)]),sep="")
 names(obs_data)[ncol(obs_data)] <- "comment"
 #Clean up empty columns
 for(i in ncol(obs_data):1){
@@ -56,15 +57,15 @@ for(i in ncol(obs_data):1){
 #obs_data <- obs_data[obs_data$timestamp>as.POSIXct("2017-10-11 10:00:00 GMT", origin = "1970-01-01", tz = "GMT"),]
 
 # Student view of the observations
-student_obs <- melt(obs_data, id=1:2, measure=3:(ncol(obs_data)-1))
+student_obs <- melt(obs_data, id=1:3, measure=4:(ncol(obs_data)-1))
 student_obs$disengaged <- as.numeric(grepl(pattern = "disengaged", x = student_obs$value, fixed = TRUE))
 student_obs$looking <- as.numeric(grepl(pattern = "Looking", x = student_obs$value, fixed = TRUE))
 student_obs$talking <- as.numeric(grepl(pattern = "Talking", x = student_obs$value, fixed = TRUE))
 student_obs$technology <- as.numeric(grepl(pattern = "technology", x = student_obs$value, fixed = TRUE))
 student_obs$resources <- as.numeric(grepl(pattern = "resources", x = student_obs$value, fixed = TRUE))
 student_obs$external <- as.numeric(grepl(pattern = "external", x = student_obs$value, fixed = TRUE))
-names(student_obs)[[3]]<-"student"
-student_obs <- student_obs[,c(1:3,5:ncol(student_obs))]
+names(student_obs)[[4]]<-"student"
+student_obs <- student_obs[,c(1:4,6:ncol(student_obs))]
 student_obs$student.id <- paste(student_obs$group,student_obs$student)
 
 
@@ -72,13 +73,13 @@ student_obs$student.id <- paste(student_obs$group,student_obs$student)
 
 
 # Group view of the observations
-group_obs <- obs_data[,c("timestamp","group","comment")]
-ag_dis <- aggregate(disengaged ~ timestamp+group, data=student_obs, FUN=sum)
-ag_look <- aggregate(looking ~ timestamp+group, data=student_obs, FUN=sum)
-ag_talk <- aggregate(talking ~ timestamp+group, data=student_obs, FUN=sum)
-ag_tech <- aggregate(technology ~ timestamp+group, data=student_obs, FUN=sum)
-ag_res <- aggregate(resources ~ timestamp+group, data=student_obs, FUN=sum)
-ag_ext <- aggregate(external ~ timestamp+group, data=student_obs, FUN=sum)
+group_obs <- obs_data[,c("timestamp","group","task","comment")]
+ag_dis <- aggregate(disengaged ~ timestamp+group+task, data=student_obs, FUN=sum)
+ag_look <- aggregate(looking ~ timestamp+group+task, data=student_obs, FUN=sum)
+ag_talk <- aggregate(talking ~ timestamp+group+task, data=student_obs, FUN=sum)
+ag_tech <- aggregate(technology ~ timestamp+group+task, data=student_obs, FUN=sum)
+ag_res <- aggregate(resources ~ timestamp+group+task, data=student_obs, FUN=sum)
+ag_ext <- aggregate(external ~ timestamp+group+task, data=student_obs, FUN=sum)
 
 group_obs <- merge(group_obs, ag_dis)
 group_obs <- merge(group_obs, ag_look)
@@ -102,7 +103,7 @@ group_obs$comment <- as.character(group_obs$comment)
 
 ```{r engagement-all}
 
-kable(colMeans(student_obs[4:(ncol(student_obs)-1)]))
+kable(colMeans(student_obs[5:(ncol(student_obs)-1)]))
 
 ```
 
@@ -110,9 +111,11 @@ kable(colMeans(student_obs[4:(ncol(student_obs)-1)]))
 
 ```{r engagement-grp}
 # Engagement profile of a student
-ag_grp <- aggregate(cbind(disengaged,looking,talking,resources,external)~group, data=student_obs, FUN="mean")
+ag_grp <- aggregate(cbind(disengaged,looking,talking,resources,external)~group+task, data=student_obs, FUN="mean")
 meltedgrp <- melt(ag_grp)
 ggplot(meltedgrp, aes(x=as.factor(group),y=value))+geom_bar(aes(fill = variable), position = "dodge", stat="identity")+coord_flip()+theme_minimal()
+
+ggplot(meltedgrp, aes(x=as.factor(group),y=value))+geom_bar(aes(fill = variable), position = "dodge", stat="identity")+coord_flip()+theme_minimal()+facet_wrap(~task)
 
 ```
 
@@ -130,10 +133,10 @@ ggplot(meltedstu, aes(x=as.factor(student.id),y=value))+geom_bar(aes(fill = vari
 ### PCA analysis: Dimensions explaining most variance
 
 ```{r pca-obs}
-pca.student <- PCA(student_obs[,4:(ncol(student_obs)-1)], scale.unit = TRUE, graph = FALSE)
+pca.student <- PCA(student_obs[,5:(ncol(student_obs)-1)], scale.unit = TRUE, graph = FALSE)
 # Interpretation of dimensions: engagement, external focus
 student_obs$participation <- pca.student$ind$coord[,1]
-student_obs$focusext <- pca.student$ind$coord[,2]
+student_obs$focusext <- pca.student$ind$coord[,2] # Not really interpretable!
 plot(pca.student,choix="var")
 ```
 
@@ -156,7 +159,7 @@ Using these two indexes (participation and group/external focus), we can draw th
 #meltpca <- melt(agpca)
 #ggplot(agpca, aes(x=participation, y=focusext, col=group))+geom_point(size=3)
 
-meltpca <- melt(student_obs, id.vars = c("group","student.id"), measure.vars = c("participation","focusext"))
+meltpca <- melt(student_obs, id.vars = c("group","student.id", "task"), measure.vars = c("participation"))
 
 # Optional: filter only groups 2 and 6 for comparison
 #filteredpca <- meltpca[meltpca$group=="Group 2" | meltpca$group == "Group 6",] 
@@ -164,6 +167,11 @@ meltpca <- melt(student_obs, id.vars = c("group","student.id"), measure.vars = c
 #ggplot(filteredpca, aes(y=value, x=group, fill=group))+geom_violin()+geom_boxplot(alpha=0.1)+facet_wrap(~variable)+coord_flip()
 ggplot(meltpca, aes(y=value, x=group, fill=group))+geom_violin()+geom_boxplot(alpha=0.1)+facet_wrap(~variable)+coord_flip()+theme_minimal()
 
+ggplot(meltpca, aes(y=value, x=group, fill=group))+geom_violin()+geom_boxplot(alpha=0.1)+facet_wrap(~task)+
+  coord_flip()+theme_minimal()
+
+agpart <- aggregate(value~group+task, meltpca, mean)
+ggplot(agpart, aes(x=task, y=value))+geom_bar(aes(fill = group), position = "dodge", stat="identity")+theme_minimal()+coord_flip()
 ```
 
 We can also see, for example, how the engagement varied over time, for each group:
@@ -173,9 +181,9 @@ We can also see, for example, how the engagement varied over time, for each grou
 #ggplot(filteredobs, aes(x=timestamp, y=participation, col=group))+geom_smooth(span = 0.15, se=F)+theme_minimal()+geom_point(alpha=0.1,size=4)
 student_obs$timestamp <- as.POSIXct(strptime(student_obs$timestamp, "%d/%m/%Y %H:%M:%S"), origin = "1970-01-01", tz = "GMT")
 ggplot(student_obs, aes(x=timestamp, y=participation, col=group))+
-  geom_smooth(span=0.25, se=F)+
-  theme_minimal()
-  #geom_point(alpha=0.1,size=4)
+  geom_smooth(span=0.3, se=F)+ #, method="lm"
+  theme_minimal()+geom_point(alpha=0.1,size=4)
+  
 ```
 
 
@@ -185,16 +193,66 @@ A common feature in the study of collaborative learning and problem-solving is t
 
 ```{r gini-grp}
 
-ag_part <- aggregate(participation~student.id+group, data = student_obs, FUN=mean)
+ag_part <- aggregate(participation~student.id+group+task, data = student_obs, FUN=mean)
 ag_part$participation <- ag_part$participation-min(ag_part$participation) # We make the values all positive
-ag_gini2 <- aggregate(participation~group, data=ag_part, FUN=ineq)
-names(ag_gini2)[2] <- "participation inequality"
-kable(ag_gini2)
-
+ag_gini2 <- aggregate(participation~group+task, data=ag_part, FUN=ineq)
+#names(ag_gini2)[3] <- "participation inequality"
+#kable(ag_gini2)
+ggplot(ag_gini2, aes(y=participation, x=group, fill=task))+geom_bar(position = "dodge", stat="identity")+theme_minimal()+coord_flip()+ylab("Participation inequality")
 #library(corrplot)
 #M <- cor(student_obs[,4:9])
 #corrplot.mixed(M)
 
 
 # TODO: separate the activities in 10-20 temporal bins and do Gini coeff over time?
+```
+
+## Student feedback
+
+```{r}
+############### STUDENT FEEDBACK
+# Read and clean the individual activity feedback data
+fb1_url <- "https://docs.google.com/spreadsheets/d/1NbsjX7vQqgfCKmTJQ-9Zs3zj2dU0CrnMBavXy9qZfqc/edit"
+#fb1_data <- read.xlsx(fb1_datafile, sheetIndex = 1)
+fb1_data <- read.csv(text=gsheet2text(fb1_url, format='csv'), stringsAsFactors=FALSE)
+names(fb1_data) <- c("timestamp", "group", "student", "activity", "contribution", "difficulty", "preparedness", "satisfaction", "relevant", "collab.challenges", "skill.gap")
+#levels(fb1_data$activity) <- c("I", "II", "III", "IV")
+fb1_data$contribution <- as.numeric(gsub( " .*$", "", fb1_data$contribution ))
+fb1_data$student.id <- paste(fb1_data$group,fb1_data$student)
+
+# Read and clean the final feedback data
+fb2_url <- "https://docs.google.com/spreadsheets/d/1v2E-FQMl4t2qJAAc3Vg8Qo6-7-W_Ajq5ja89QBPk4Fs/edit"
+#fb2_data <- read.xlsx(fb2_datafile, sheetIndex = 1)
+fb2_data <- read.csv(text=gsheet2text(fb2_url, format='csv'), stringsAsFactors=FALSE)
+names(fb2_data) <- c("timestamp", "group", "student", "strategies", "roles", "overall.satisfaction", "suggestions.activities", "easy.instructions", "technical.problems", "comments")
+fb2_data$student.id <- paste(fb2_data$group,fb2_data$student)
+
+
+```
+
+Student satisfaction with activities
+
+```{r}
+plotdata <- fb1_data[,c(2:9,12)]
+melted <- melt(plotdata, id.vars = c(1:3,9), measure.vars = 4:8)
+
+melted_cont <- melted[melted$variable=="contribution",]
+melted_rest <- melted[melted$variable!="contribution",]
+
+# Overall distribution of contributions, satisfaction, difficulty, preparedness
+# ggplot(melted_cont, aes(x=value))+geom_density()+theme_minimal()+xlim(0,100)
+ggplot(melted_rest, aes(x=value))+geom_histogram(fill="lightgrey",bins=10)+theme_minimal()+scale_x_continuous(breaks=seq(0,9,1), limits=c(0,9))+ggtitle("Student perception of activities, in-the-moment")+facet_grid(~ variable)
+
+
+ggplot(fb2_data, aes(x=overall.satisfaction))+geom_histogram(fill="grey",bins=10)+theme_minimal()+scale_x_continuous(breaks=seq(0,9,1), limits=c(0,9))+ggtitle("Overall satisfaction, next day reflection")
+
+```
+
+
+Values per activity...
+
+```{r}
+
+ggplot(melted_rest, aes(x=variable, y=value, fill=activity))+geom_boxplot()+theme_minimal()+scale_y_continuous(breaks=seq(0,9,1), limits=c(0,9))
+
 ```
