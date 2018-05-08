@@ -587,7 +587,7 @@ This visualization is quite complex, but we can already see that different stude
 # Engagement profile of a student
 ag_grp <- aggregate(cbind(disengaged,looking,talking,resources,external)~group, data=student_obs, FUN="mean")
 meltedgrp <- melt(ag_grp)
-ggplot(meltedgrp, aes(x=as.factor(group),y=value))+geom_bar(aes(fill = variable), position = "dodge", stat="identity")+coord_flip()+theme_minimal()
+ggplot(meltedgrp, aes(x=as.factor(group),y=value))+geom_bar(aes(fill = variable), position = "dodge", stat="identity")+coord_flip()+theme_minimal()+xlab("")+ylab("Proportion of time the behavior was observed\n(avg. of group members)")+guides(fill=guide_legend(title="Engagement behavior"))
 
 ```
 
