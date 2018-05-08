@@ -199,7 +199,8 @@ fb1_datafile <- "../data/raw/20171011/Avastame Kadriorgu - Individual activity f
 
 fb1_data <- read.xlsx(fb1_datafile, sheetIndex = 1)
 names(fb1_data) <- c("timestamp", "group", "student", "activity", "contribution", "difficulty", "preparedness", "satisfaction", "relevant")
-levels(fb1_data$activity) <- c("I", "II", "III", "IV")
+fb1_data <- fb1_data[1:89,] # REmove the responses from the second day!
+levels(fb1_data$activity) <- c("I", "II", "III", "IV", "V", "VI")
 fb1_data$contribution <- as.numeric(gsub( " .*$", "", fb1_data$contribution ))
 fb1_data$student.id <- paste(fb1_data$group,fb1_data$student)
 
@@ -208,6 +209,7 @@ fb2_datafile <- "../data/raw/20171011/Avastame Kadriorgu - Final feedback (Respo
 
 fb2_data <- read.xlsx(fb2_datafile, sheetIndex = 1)
 names(fb2_data) <- c("timestamp", "group", "student", "strategies", "roles", "overall.satisfaction", "suggestions")
+fb2_data <- fb2_data[1:19,] # Remove the responses from other days!
 fb2_data$student.id <- paste(fb2_data$group,fb2_data$student)
 
 ######### ASSESSMENTS DATA
@@ -337,16 +339,19 @@ ggplot(aggr_ass, aes(x=group, y=value, fill=group)) +
     geom_errorbar(aes(ymin=value-ci, ymax=value+ci),
                   width=.2,                    # Width of the error bars
                   position=position_dodge(.9))+theme_minimal()+ylim(c(0,4))+
-    ggtitle("Average teacher assessment per group,\nfrom 1-poor, to 4-very good")
+    xlab("Student group")+ylab("Assessment")+ theme(legend.position="none")#+
+    #ggtitle("Average teacher assessment per group,\nfrom 1-poor, to 4-very good")
 
 aggr_ass2 <- summarySE(melted_ass, measurevar="value", groupvars=c("variable"))
+levels(aggr_ass2$variable) <- c("I maps","II building\n&selfie","III data\ncollecting","IV poem\n&selfie","V discussion","VI artwork")
 ggplot(aggr_ass2, aes(x=variable, y=value, fill=variable)) + 
     geom_bar(position=position_dodge(), stat="identity") +
     geom_errorbar(aes(ymin=value-ci, ymax=value+ci),
                   width=.2,                    # Width of the error bars
                   position=position_dodge(.9))+theme_minimal()+ylim(c(0,4))+
     scale_fill_brewer(palette="Set2")+
-    ggtitle("Average teacher assessment per activity,\nfrom 1-poor, to 4-very good")
+    xlab("Activity")+ylab("Assessment")+ theme(legend.position="none")
+    #ggtitle("Average teacher assessment per activity,\nfrom 1-poor, to 4-very good")
 
 ```
 
@@ -382,7 +387,10 @@ Even more interesting to polish the activity design, we can look at **how the st
 
 ```{r activity-fb, fig.height=4, fig.width=8}
 # # difficulty, preparedness and satisfaction per activity
-ggplot(melted_rest, aes(x=variable, y=value, fill=activity))+geom_boxplot()+theme_minimal()+scale_y_continuous(breaks=seq(0,9,1), limits=c(0,9))
+
+levels(melted_rest$activity) <-  c("I maps","II building&selfie","III data collecting","IV poem&selfie","V discussion","VI artwork")
+ggplot(melted_rest, aes(x=variable, y=value, fill=activity))+geom_boxplot()+theme_minimal()+scale_y_continuous(breaks=seq(0,9,1), limits=c(0,9))+
+  ylab("")+xlab("")+guides(fill=guide_legend(title="Activity"))
 # Are differences significant?
 
 # summary(lm(difficulty~activity, data=fb1_data)) # Activity II seems to be considerably easier
