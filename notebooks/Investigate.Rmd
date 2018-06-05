@@ -1,0 +1,61 @@
+---
+title: 'Principal Component Analysis'
+author: 'Dataset student_obs'
+output:
+  html_document: default
+---
+This dataset contains 775 individuals and 5 variables.
+
+- - -
+
+```{r, echo = FALSE}
+load('Workspace.RData')
+```
+### 1. Study of the outliers
+The analysis of the graphs leads to detect outliers that strongly influence the results. First we will describe these outliers and then we will suppress them from the analysis.
+Looking at the graph, we can note that 45 particular individuals strongly contribute to the construction of the plane. The cumulative contribution of these individuals to the construction of the plane equals **31.2%**.
+
+```{r, echo = FALSE, fig.align = 'center', fig.height = 3.5, fig.width = 5.5}
+drawn <-
+integer(0)
+par(mar = c(4.1, 4.1, 1.1, 2.1))
+plot.PCA(memory, choix = 'ind', invisible = c('var', 'quali'), select = drawn, title = '', cex = cex)
+```
+
+**Figure 1.1 - Individuals factor map (PCA) before correction.** 
+*Highlighting of 45 outliers.* 
+
+```{r, echo = FALSE, fig.align = 'center', fig.height = 3.5, fig.width = 5.5}
+drawn <-
+integer(0)
+par(mar = c(4.1, 4.1, 1.1, 2.1))
+plot.PCA(res, choix = 'ind', invisible = c('var', 'quali'), select = drawn, title = '', cex = cex)
+```
+
+**Figure 1.2 - Individuals factor map (PCA) after correction.** 
+*Highlighting of 45 outliers.* 
+
+```{r, echo = FALSE, fig.align = 'center', fig.height = 3.5, fig.width = 5.5}
+drawn <-
+c("disengaged", "looking")
+par(mar = c(4.1, 4.1, 1.1, 2.1))
+plot.PCA(memory, choix = 'var', select = drawn, title = '', cex = cex)
+```
+
+**Figure 1.3 - Variables factor map (PCA) before correction**
+*The labeled variables are those the best shown on the plane.*
+
+```{r, echo = FALSE, fig.align = 'center', fig.height = 3.5, fig.width = 5.5}
+drawn <-
+c("disengaged", "looking")
+par(mar = c(4.1, 4.1, 1.1, 2.1))
+plot.PCA(res, choix = 'var', select = drawn, title = '', cex = cex)
+```
+
+**Figure 1.3 - Variables factor map (PCA) after correction**
+
+- - -
+
+**The individual 58** :
+
+- takes very high values for the variable(s) :
