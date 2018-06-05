@@ -1,4 +1,5 @@
 library(reshape2)
+library(gsheet)
 
 processObservationData <- function(data, 
                                    nrlevels=6, 
@@ -89,16 +90,14 @@ processAllObservationData <- function(){
   
   #List of all file names & corresponding dates
   #Will have to change names accordingly
-  fileNames <- c("Observersheet1810.csv","Observersheet0612.csv","Observersheet1001.csv",
-                "Observersheet1108.csv","Observersheet1110.csv","Observersheet1312.csv",
-                "Observersheet2211.csv")
-  fileDates <- c(date=as.POSIXct(strptime("18-10-2017", "%d-%m-%Y")),
-                 date=as.POSIXct(strptime("06-12-2017", "%d-%m-%Y")),
-                 date=as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
-                 date=as.POSIXct(strptime("11-08-2017", "%d-%m-%Y")),
-                 date=as.POSIXct(strptime("11-10-2017", "%d-%m-%Y")),
-                 date=as.POSIXct(strptime("13-12-2017", "%d-%m-%Y")),
-                 date=as.POSIXct(strptime("12-11-2017", "%d-%m-%Y")))
+  fileNames <- c("https://docs.google.com/spreadsheets/d/11BPHcSlqwozx3ffOQhQ5i5O8TRVa8xKoaw2uiny8k5A/edit",
+                 "https://docs.google.com/spreadsheets/d/1kqSu52ZJo0y3cnhAe9fEsv9t7kUdRQ-2cKqSsziQk_M/edit",
+                 "https://docs.google.com/spreadsheets/d/1FSqm57ygxaIFa5V5oUCx7ht21ayuxMm7MO2IeczZ7ww/edit",
+                 "https://docs.google.com/spreadsheets/d/13Od5UuY5LLh2E5EPVD17IP6dO3x_xTpxyVYg9BQmIdE/edit",
+                 "https://docs.google.com/spreadsheets/d/1hkkeSRYKKtlpxYAA4jEUddhkv-X5oj6gXzGPKobA5Wc/edit",
+                 "https://docs.google.com/spreadsheets/d/1FSqm57ygxaIFa5V5oUCx7ht21ayuxMm7MO2IeczZ7ww/edit",
+                 "https://docs.google.com/spreadsheets/d/1zcq0lGaavcxjdeEOgc6uNtMGAEy_NqXg4ufmnFaUjJo/edit",
+                 "https://docs.google.com/spreadsheets/d/1EoAfPj2hFcmlHo2ndfunLV4krkgJ2a69KlCi5NoYp0k/edit")
   #projectNames <- c()
               
   
@@ -110,13 +109,15 @@ processAllObservationData <- function(){
                                     date = as.Date(character()),global.id = character(), observer = character())
   
   for (i in 1:length(fileNames)){
-    #Will have to change directory accordingly
-    directory <- paste("~/Documents/GitHub/project-days-data-analysis/src/",fileNames[i], sep = "")
-    raw_data <- read.csv(directory)
+    raw_data <- as.data.frame(gsheet2tbl(fileNames[i]))
     
     raw_data_head <- colnames(raw_data)
     
-    sheet_date <- fileDates[i]
+    
+    date_string <- raw_data[1,1]
+    print(date_string[1][1])
+    #print(raw_data["Timestamp",3])
+    sheet_date <- as.Date(date_string[1], format = "%d/%m/%Y")
     
     activity <- F
     observer <- F
@@ -155,14 +156,6 @@ processAllObservationData <- function(){
     
     processed_data <- processObservationData(raw_data, date = sheet_date, namecols = name_cols,
                                              activitycol = activity, observercol = observer)
-    
-    #print(fileNames[i])
-    #print(names(complete_dataset))
-    #print(names(processed_data))
-    
-    #dataframe_dummy <- rbind(t(complete_dataset[2, ]), t(processed_data))
-    #rownames(dataframe_dummy) <- complete_dataset[1, ]
-    #complete_dataset <- dataframe_dummy
     
     complete_dataset <- rbind(complete_dataset, processed_data)
   }
