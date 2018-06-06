@@ -1,8 +1,7 @@
 library(reshape2)
 library(gsheet)
 
-processObservationData <- function(data, 
-                                   nrlevels=6, 
+processObservationData <- function(data,
                                    date=as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
                                    project="Isle", 
                                    activitycol=F,
@@ -86,19 +85,16 @@ processObservationData <- function(data,
  student_obs
 }
 
-processAllObservationData <- function(){
+processAllObservationData <- function(fileURLs = c("https://docs.google.com/spreadsheets/d/11BPHcSlqwozx3ffOQhQ5i5O8TRVa8xKoaw2uiny8k5A/edit",
+                                                     "https://docs.google.com/spreadsheets/d/1kqSu52ZJo0y3cnhAe9fEsv9t7kUdRQ-2cKqSsziQk_M/edit",
+                                                     "https://docs.google.com/spreadsheets/d/1FSqm57ygxaIFa5V5oUCx7ht21ayuxMm7MO2IeczZ7ww/edit",
+                                                     "https://docs.google.com/spreadsheets/d/13Od5UuY5LLh2E5EPVD17IP6dO3x_xTpxyVYg9BQmIdE/edit",
+                                                     "https://docs.google.com/spreadsheets/d/1hkkeSRYKKtlpxYAA4jEUddhkv-X5oj6gXzGPKobA5Wc/edit",
+                                                     "https://docs.google.com/spreadsheets/d/1FSqm57ygxaIFa5V5oUCx7ht21ayuxMm7MO2IeczZ7ww/edit",
+                                                     "https://docs.google.com/spreadsheets/d/1zcq0lGaavcxjdeEOgc6uNtMGAEy_NqXg4ufmnFaUjJo/edit",
+                                                     "https://docs.google.com/spreadsheets/d/1EoAfPj2hFcmlHo2ndfunLV4krkgJ2a69KlCi5NoYp0k/edit")){
   
-  #List of all file names & corresponding dates
-  #Will have to change names accordingly
-  fileNames <- c("https://docs.google.com/spreadsheets/d/11BPHcSlqwozx3ffOQhQ5i5O8TRVa8xKoaw2uiny8k5A/edit",
-                 "https://docs.google.com/spreadsheets/d/1kqSu52ZJo0y3cnhAe9fEsv9t7kUdRQ-2cKqSsziQk_M/edit",
-                 "https://docs.google.com/spreadsheets/d/1FSqm57ygxaIFa5V5oUCx7ht21ayuxMm7MO2IeczZ7ww/edit",
-                 "https://docs.google.com/spreadsheets/d/13Od5UuY5LLh2E5EPVD17IP6dO3x_xTpxyVYg9BQmIdE/edit",
-                 "https://docs.google.com/spreadsheets/d/1hkkeSRYKKtlpxYAA4jEUddhkv-X5oj6gXzGPKobA5Wc/edit",
-                 "https://docs.google.com/spreadsheets/d/1FSqm57ygxaIFa5V5oUCx7ht21ayuxMm7MO2IeczZ7ww/edit",
-                 "https://docs.google.com/spreadsheets/d/1zcq0lGaavcxjdeEOgc6uNtMGAEy_NqXg4ufmnFaUjJo/edit",
-                 "https://docs.google.com/spreadsheets/d/1EoAfPj2hFcmlHo2ndfunLV4krkgJ2a69KlCi5NoYp0k/edit")
-  #projectNames <- c()
+
               
   
   complete_dataset <- data.frame(timestamp=as.Date(character()), group=character(), activity=character(), 
@@ -108,15 +104,13 @@ processAllObservationData <- function(){
                                     student.id = character(), project = character(),
                                     date = as.Date(character()),global.id = character(), observer = character())
   
-  for (i in 1:length(fileNames)){
-    raw_data <- as.data.frame(gsheet2tbl(fileNames[i]))
+  for (i in 1:length(fileURLs)){
+    raw_data <- as.data.frame(gsheet2tbl(fileURLs[i]))
     
     raw_data_head <- colnames(raw_data)
     
     
     date_string <- raw_data[1,1]
-    print(date_string[1][1])
-    #print(raw_data["Timestamp",3])
     sheet_date <- as.Date(date_string[1], format = "%d/%m/%Y")
     
     activity <- F
