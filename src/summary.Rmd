@@ -79,5 +79,6 @@ observer column have been created which makes it easier to merge and compare thi
 ```{r third}
 processed_data <- processObservationData(raw_data)
 summary(processed_data)
+str(processed_data)
 ```
 
