@@ -2,7 +2,7 @@
 title: "Processing Observation Data from Learning Experiments"
 author: "Lewis Marsh and Luis P. Prieto"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: pdf_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -147,4 +147,6 @@ on groups and timestamps, summing up the MCA dimension.
 ```
 
 
+## Topic modeling of observer comments
 
+... using Latent Dirichlet Allocation (LDA) (TBD by Luis)
