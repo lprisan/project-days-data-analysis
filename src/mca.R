@@ -1,7 +1,8 @@
 library(FactoMineR)
 library(ggplot2)
 library(factoextra)
-
+library(magrittr)
+library(dplyr)
 
 mca_analysis <- function(data, plots = T){
   mca_data <- data[,c("disengaged","looking","talking","technology","resources","external")]
@@ -102,3 +103,21 @@ create_violin_plot <- function(dataframe, dimension = 1){
 
   p
 }
+
+first_element <- function(data){
+  data[1]
+}
+
+aggregate_by_groups <- function(dataframe, raw_data){
+  
+  return_data <- dataframe %>%
+    group_by(timestamp, group) %>%
+    summarize(MCAdim1 = sum(MCAdim1, na.rm = TRUE), MCAdim2 = sum(MCAdim2, na.rm = TRUE),
+              MCAdim3 = sum(MCAdim3, na.rm = TRUE), activity = first_element(activity),
+              observer = first_element(observer), project = first_element(project),
+              date = first_element(date), ann = first_element(ann))
+  
+  
+  return_data
+}
+

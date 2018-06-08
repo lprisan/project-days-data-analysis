@@ -1,5 +1,6 @@
 library(reshape2)
 library(gsheet)
+library(pracma)
 
 processObservationData <- function(data,
                                    date=as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
@@ -14,7 +15,6 @@ processObservationData <- function(data,
   obs_data <- data
   names(obs_data) <- namecols
   
-
   #Clean up empty columns
   # for(i in ncol(obs_data):1){
   # if(sum(complete.cases(obs_data[i]))==0 || sum(obs_data[i]!="")==0 || sum(obs_data[i]!="")==1)
@@ -27,21 +27,23 @@ processObservationData <- function(data,
   #Student view of the observations
   if(observercol){
     if(!activitycol){
-      student_obs <- melt(obs_data, id=c(1:2,ncol(obs_data)), measure=4:(ncol(obs_data)-2), na.rm=T)
-     names(student_obs)[[4]]<-"student"
-     names(student_obs)[[3]]<-"observer"
+      student_obs <- melt(obs_data, id=c(1:2,(ncol(obs_data)-1):ncol(obs_data)), measure=4:(ncol(obs_data)-2), na.rm=T)
+     names(student_obs)[[5]]<-"student"
+     names(student_obs)[4]<-"observer"
     }else{
       #print(obs_data)
-     student_obs <- melt(obs_data, id=c(1:3,ncol(obs_data)), measure=4:(ncol(obs_data)-2), na.rm=T)
-     names(student_obs)[[5]]<-"student"
+     student_obs <- melt(obs_data, id=c(1:3,(ncol(obs_data)-1):ncol(obs_data)), measure=4:(ncol(obs_data)-2), na.rm=T)
+     names(student_obs)[[6]]<-"student"
+     names(student_obs)[5]<-"observer"
     }
    }else{
    if(!activitycol){
-     student_obs <- melt(obs_data, id=1:2, measure=3:(ncol(obs_data)-1), na.rm=T)
-     names(student_obs)[[3]]<-"student"
-   }else{
-     student_obs <- melt(obs_data, id=1:3, measure=4:(ncol(obs_data)-1), na.rm=T)
+     student_obs <- melt(obs_data, id=c(1:2,ncol(obs_data)), measure=3:(ncol(obs_data)-1), na.rm=T)
      names(student_obs)[[4]]<-"student"
+     #names(student_obs)[[3]]<-"comments"
+   }else{
+     student_obs <- melt(obs_data, id=c(1:3,ncol(obs_data)), measure=4:(ncol(obs_data)-1), na.rm=T)
+     names(student_obs)[[5]]<-"student"
    }
   }
   
@@ -55,25 +57,27 @@ processObservationData <- function(data,
 
  if(observercol){
    if(!activitycol){
+     student_obs <- student_obs[,c(1:5,7:ncol(student_obs))]
+   }else{
+     student_obs <- student_obs[,c(1:6,8:ncol(student_obs))]
+   }
+ }else{
+   if(!activitycol){
      student_obs <- student_obs[,c(1:4,6:ncol(student_obs))]
    }else{
      student_obs <- student_obs[,c(1:5,7:ncol(student_obs))]
    }
- }else{
-   if(!activitycol){
-     student_obs <- student_obs[,c(1:3,5:ncol(student_obs))]
-   }else{
-     student_obs <- student_obs[,c(1:4,6:ncol(student_obs))]
-   }
  }
  # summary(student_obs)
  if(!activitycol){
-   student_obs$activity <- "Standard"
+   student_obs$activity <- " "
+   student_obs$activity <- NA
  }
  #student_obs$activity <- factor(student_obs$activity)
  
  if(!observercol){
-   student_obs$observer <- "1-A"
+   student_obs$observer <- " "
+   student_obs$observer <- NA
  }
  #student_obs$observer <- factor(student_obs$observer)
  
@@ -81,7 +85,12 @@ processObservationData <- function(data,
  student_obs$date <- date
 
  student_obs$global.id <- paste(student_obs$project,student_obs$date,student_obs$student.id)
-
+ 
+ #names(student_obs)[3]<-"ann"
+ #names(student_obs)[4]<-"observer"
+ 
+ student_obs <- complete_columns(student_obs)
+ 
  student_obs
 }
 
@@ -102,10 +111,11 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
                                     looking = as.integer(), talking = as.integer(), technology = as.integer(),
                                     resources = as.integer(), external = as.integer(),
                                     student.id = character(), project = character(),
-                                    date = as.Date(character()),global.id = character(), observer = character())
+                                    date = as.Date(character()),global.id = character(), observer = character(),
+                                    ann = character())
   
   for (i in 1:length(fileURLs)){
-    raw_data <- as.data.frame(gsheet2tbl(fileURLs[i]))
+    raw_data <- as.data.frame(gsheet2tbl(fileURLs[i]), check.names = FALSE, fileEncoding="UTF-8-BOM")
     
     raw_data_head <- colnames(raw_data)
     
@@ -119,7 +129,7 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
     
     #Detects whether there are several activities listed on the Observersheet
     #Problem with encoding of .csv file on Mac: "In which" should be what works on windows 
-    if(grepl(pattern = "In.which", x = raw_data_head[3], fixed = TRUE)){activity <- T}
+    if(grepl(pattern = "In which", x = raw_data_head[3], fixed = TRUE)){activity <- T}
     if(grepl(pattern = "observer", x = raw_data_head[length(raw_data_head)], fixed = TRUE)){observer <- T}
     
     #Counts the number of students per group on the the Observersheet
@@ -146,10 +156,12 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
     
     if(observer){name_cols <- c(name_cols,"observer")}
     
-
     processed_data <- processObservationData(raw_data, date = sheet_date, namecols = name_cols,
                                              activitycol = activity, observercol = observer,
                                              project = projectNames[i])
+    
+    print(names(complete_dataset))
+    print(names(processed_data))
     
     complete_dataset <- rbind(complete_dataset, processed_data)
   }
@@ -157,3 +169,27 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
   complete_dataset
 }
 
+complete_columns <- function(dataframe){
+  missing <- F
+  position <- 0
+  
+  ideal <- c("timestamp", "group", "ann", "student", "disengaged", "looking", "talking", "technology",
+    "resources", "external", "student.id", "activity", "observer", "project", "date", "global.id")
+  
+  header <- names(dataframe)
+  
+  for(i in 1:length(header)){
+    if(is.na(header[i])){
+      missing <- T
+      position <- i
+      header <- header[c(1:(i-1),(i+1):length(header))]
+    }
+  }
+  
+  if(missing){
+    ideal <- ideal[!(ideal %in% header)]
+    names(dataframe)[position] <- ideal[1]
+  }
+  
+  dataframe
+}
