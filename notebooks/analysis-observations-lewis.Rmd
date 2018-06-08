@@ -1,0 +1,150 @@
+---
+title: "Processing Observation Data from Learning Experiments"
+author: "Lewis Marsh and Luis P. Prieto"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(gsheet)
+library(knitr)
+
+source("../src/processObservationData.R")
+source("../src/mca.R")
+
+raw_data <- as.data.frame(gsheet2tbl("https://docs.google.com/spreadsheets/d/11BPHcSlqwozx3ffOQhQ5i5O8TRVa8xKoaw2uiny8k5A/edit"))
+```
+
+This R Markdown report aims to summarise the analyses done on the observation data of several sessions of innovative learning activities, from which multimodal data has been gathered
+
+# Observation data
+
+## Preprocessing
+
+The preprocessing is taken care by the R script in `src/processObservationData.R`. It consists of two main functions, `processObservationData` (to process the data of one session) and `processAllObservationData` (for multiple sessions).
+
+The first of these two functions,
+```
+data <- processObservationData(raw_data,
+                       date=as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
+                       project="Isle", 
+                       activitycol=F,
+                       observercol=F,
+                       namecols=c("timestamp","group",
+                            "StudentA","StudentB","StudentC","StudentD"))
+```
+takes in a dataframe with the raw observation data, together with some other parameters about the structure of the raw dataset and expected columns in the processed dataset, and returns a clean data frame with the observations for each individual.
+
+In the orginal data sheets, each entry lists the observation for a whole group of students (between 3 and 6
+usually) and the observations are listed as a piece of (predefined) text, such as "Talking with their group peers
+to solve the task" or "Totally disengaged".
+
+In the output this is broken up into individual entries for each student, for which a student variable is
+introduced. Furthermore, each possible observation is turned into a boolean variable for each of these entries,
+which makes it easier to conduct further statistical analysis of the dataset. Also, a column
+with additional notes from the original dataframe is dropped in the output, as it is difficult to make use of
+in a statistical test, and a global ID is created for each student, using the date, group, student number in the
+group and the project name. This will be of use when merging several datasets with the second function.
+
+As students undertook several tastks in some of the experiments/projects, the input variable "activitycol" indicates whether the function has to look for an extra activity column in the input data. This will be taken over
+one-to-one in the output or will be filled in with "Standard" if there was only one activity.
+Similarly, in some projects there were more than one observer placed onto each group to enable to test the
+reliability of the observers and the data they produce. The variable "observercol" tells the function whether
+there is a separate observer column to take over from the input data. Otherwise "1-A" is filled in for each
+observer.
+
+The second function, `processAllObservationData` takes in a vector of URLs in which the GoogleDocs
+containing the experimental data are stored in. It reads the data from the online sheets and places
+them in a dataframe. By examining the names of the columns in the dataframe, it detects whether there
+are activity or observation columns. By inspecting the first time stamp, it determines the date of the experiment.
+It then cleans the data using the first function and adds it to the end of a larger dataframe which
+eventually gets returned after the function has iterated through all URLs.
+
+### Example of Output
+To exhibit what the functions do, there is a brief example. We are given a data frame taken from
+one of the GoogleDocs:
+```{r first, include=FALSE}
+raw_data <- as.data.frame(gsheet2tbl("https://docs.google.com/spreadsheets/d/11BPHcSlqwozx3ffOQhQ5i5O8TRVa8xKoaw2uiny8k5A/edit"))
+```
+```{r second}
+raw_data[1,1:2]
+raw_data[1,3]
+```
+
+These are only two snippets of the data, as anything else would not fit onto this page.
+We see that the first two columns give a timestamp and the group. We furthermore see the oberservation for
+student A. There are 3 other students in the group with individual columns as well as
+a column for further comments.
+
+By applying the `processObservationData` function, we then see how the student variable is created
+and the observations are turned from text into boolean values. Furthermore, the activity and
+observer column have been created which makes it easier to merge and compare this data with other datasets.
+```{r third}
+processed_data <- processAllObservationData()
+summary(processed_data)
+str(processed_data)
+```
+
+### Spot checking the data
+
+Some tables to see what kind of data we have
+
+```{r fourth}
+
+table(processed_data$date, processed_data$student)
+
+```
+
+
+## MCA
+
+The `mca.R` contains several functions to create and interpret an MCA conducted on the
+idicator variables created above.
+
+Firstly, `mca_analysis(data, plots = T)` returns an mca element of the `FactoMineR` package.
+It has the options to create several plots, such as a bar plot of the significance of each newly created
+MCA dimension, the variance of the old variables in the first two dimensions and the distribution of
+each variable from the data set across the first two dimensions. An example of the last instance:
+
+```{r fifth, include = T}
+  mca <- mca_analysis(processed_data, plots = F)
+  fviz_ellipses(mca, "disengaged", geom = "point")
+```
+
+A further function is `add_mca_dimensions(dataframe, mca = NULL, dimensions = 3)`. It merges
+a chosen amount of dimension generated by the MCA into the original dataframe. One can choose
+whether one wants to generated the MCA object separately using the first functions
+(e.g. to inspect the plots first) or let the function conduct the MCA itself (if no mca is passed).
+For example:
+
+```{r sixth, include = T}
+  processed_data <- add_mca_dimensions(processed_data, mca = mca, dimensions = 3)
+```
+
+There are several functions that visualise the distribution of our given data points. All of these take
+in a dataframe to which the MCA dimensions have been added.
+
+For instance `create_dimension_histograms(dataframe, dimensions = 3)` creates a series of histograms
+that exhibit the distribution of data points on a desired amount of variables (by default the first 3).
+Similarly thereto, `reate_date_histograms(dataframe, dimension = 1)` creates histograms that show
+the distrbution of data points on a chosen dimension with each plot representing one day.
+
+The information conatined in the histograms distingushing dates can also be shown in one single plot,
+using the `create_violin_plot` function. For our specific data set, this will looke like:
+
+```{r seventh}
+  create_violin_plot(processed_data, dimension = 1)
+```
+
+Finally, the function `aggregate_by_groups(dataframe)` allows us to aggregate the dataframe
+on groups and timestamps, summing up the MCA dimension.
+
+```{r eighth}
+  processed_data <- aggregate_by_groups(processed_data)
+  summary(processed_data)
+```
+
+
+
