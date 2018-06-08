@@ -85,12 +85,7 @@ processObservationData <- function(data,
  student_obs$date <- date
 
  student_obs$global.id <- paste(student_obs$project,student_obs$date,student_obs$student.id)
- 
- #names(student_obs)[3]<-"ann"
- #names(student_obs)[4]<-"observer"
- 
- student_obs <- complete_columns(student_obs)
- 
+
  student_obs
 }
 
@@ -112,7 +107,7 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
                                     resources = as.integer(), external = as.integer(),
                                     student.id = character(), project = character(),
                                     date = as.Date(character()),global.id = character(), observer = character(),
-                                    ann = character())
+                                    comments = character())
   
   for (i in 1:length(fileURLs)){
     raw_data <- as.data.frame(gsheet2tbl(fileURLs[i]), check.names = FALSE, fileEncoding="UTF-8-BOM")
@@ -152,7 +147,7 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
     if(student_count>8){name_cols <- c(name_cols,"Student I")}
     if(student_count>9){name_cols <- c(name_cols,"Student J")}
     
-    name_cols <- c(name_cols,"ann")
+    name_cols <- c(name_cols,"comments")
     
     if(observer){name_cols <- c(name_cols,"observer")}
     
@@ -160,36 +155,9 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
                                              activitycol = activity, observercol = observer,
                                              project = projectNames[i])
     
-    print(names(complete_dataset))
-    print(names(processed_data))
-    
     complete_dataset <- rbind(complete_dataset, processed_data)
   }
   
   complete_dataset
 }
 
-complete_columns <- function(dataframe){
-  missing <- F
-  position <- 0
-  
-  ideal <- c("timestamp", "group", "ann", "student", "disengaged", "looking", "talking", "technology",
-    "resources", "external", "student.id", "activity", "observer", "project", "date", "global.id")
-  
-  header <- names(dataframe)
-  
-  for(i in 1:length(header)){
-    if(is.na(header[i])){
-      missing <- T
-      position <- i
-      header <- header[c(1:(i-1),(i+1):length(header))]
-    }
-  }
-  
-  if(missing){
-    ideal <- ideal[!(ideal %in% header)]
-    names(dataframe)[position] <- ideal[1]
-  }
-  
-  dataframe
-}

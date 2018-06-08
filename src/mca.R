@@ -108,14 +108,14 @@ first_element <- function(data){
   data[1]
 }
 
-aggregate_by_groups <- function(dataframe, raw_data){
+aggregate_by_groups <- function(dataframe){
   
   return_data <- dataframe %>%
     group_by(timestamp, group) %>%
     summarize(MCAdim1 = sum(MCAdim1, na.rm = TRUE), MCAdim2 = sum(MCAdim2, na.rm = TRUE),
               MCAdim3 = sum(MCAdim3, na.rm = TRUE), activity = first_element(activity),
               observer = first_element(observer), project = first_element(project),
-              date = first_element(date), ann = first_element(ann))
+              date = first_element(date), comments = first_element(comments))
   
   
   return_data
