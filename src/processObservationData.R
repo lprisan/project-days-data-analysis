@@ -1,7 +1,7 @@
 library(reshape2)
+library(gsheet)
 
-processObservationData <- function(data, 
-                                   nrlevels=6, 
+processObservationData <- function(data,
                                    date=as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
                                    project="Isle", 
                                    activitycol=F,
@@ -16,10 +16,10 @@ processObservationData <- function(data,
   
 
   #Clean up empty columns
-  for(i in ncol(obs_data):1){
-  if(sum(complete.cases(obs_data[i]))==0 || sum(obs_data[i]!="")==0 || sum(obs_data[i]!="")==1)
-    obs_data <- obs_data[,-i]
-  }
+  # for(i in ncol(obs_data):1){
+  # if(sum(complete.cases(obs_data[i]))==0 || sum(obs_data[i]!="")==0 || sum(obs_data[i]!="")==1)
+  #   obs_data <- obs_data[,-i]
+  # }
 
   #Cleanup invalid data, before 10am like "2017-10-11 09:44:49 GMT"
   #obs_data <- obs_data[obs_data$timestamp>as.POSIXct("2017-10-11 10:00:00 GMT", origin = "1970-01-01", tz = "GMT"),]
@@ -27,13 +27,13 @@ processObservationData <- function(data,
   #Student view of the observations
   if(observercol){
     if(!activitycol){
-     student_obs <- melt(obs_data, id=c(1:2,ncol(obs_data)), measure=3:(ncol(obs_data)-2), na.rm=T)
+      student_obs <- melt(obs_data, id=c(1:2,ncol(obs_data)), measure=4:(ncol(obs_data)-2), na.rm=T)
      names(student_obs)[[4]]<-"student"
+     names(student_obs)[[3]]<-"observer"
     }else{
       #print(obs_data)
      student_obs <- melt(obs_data, id=c(1:3,ncol(obs_data)), measure=4:(ncol(obs_data)-2), na.rm=T)
      names(student_obs)[[5]]<-"student"
-     head(student_obs)
     }
    }else{
    if(!activitycol){
@@ -45,7 +45,6 @@ processObservationData <- function(data,
    }
   }
   
-  new_names <- names(student_obs)
  student_obs$disengaged <- as.numeric(grepl(pattern = "disengaged", x = student_obs$value, fixed = TRUE))
  student_obs$looking <- as.numeric(grepl(pattern = "Looking", x = student_obs$value, fixed = TRUE))
  student_obs$talking <- as.numeric(grepl(pattern = "Talking", x = student_obs$value, fixed = TRUE))
@@ -68,14 +67,15 @@ processObservationData <- function(data,
    }
  }
  # summary(student_obs)
- 
  if(!activitycol){
    student_obs$activity <- "Standard"
  }
+ #student_obs$activity <- factor(student_obs$activity)
  
  if(!observercol){
    student_obs$observer <- "1-A"
  }
+ #student_obs$observer <- factor(student_obs$observer)
  
  student_obs$project <- project
  student_obs$date <- date
@@ -85,21 +85,16 @@ processObservationData <- function(data,
  student_obs
 }
 
-processAllObservationData <- function(){
+processAllObservationData <- function(fileURLs = c("https://docs.google.com/spreadsheets/d/11BPHcSlqwozx3ffOQhQ5i5O8TRVa8xKoaw2uiny8k5A/edit",
+                                                     "https://docs.google.com/spreadsheets/d/1kqSu52ZJo0y3cnhAe9fEsv9t7kUdRQ-2cKqSsziQk_M/edit",
+                                                     "https://docs.google.com/spreadsheets/d/13Od5UuY5LLh2E5EPVD17IP6dO3x_xTpxyVYg9BQmIdE/edit",
+                                                     "https://docs.google.com/spreadsheets/d/1hkkeSRYKKtlpxYAA4jEUddhkv-X5oj6gXzGPKobA5Wc/edit",
+                                                     "https://docs.google.com/spreadsheets/d/1FSqm57ygxaIFa5V5oUCx7ht21ayuxMm7MO2IeczZ7ww/edit",
+                                                     "https://docs.google.com/spreadsheets/d/1zcq0lGaavcxjdeEOgc6uNtMGAEy_NqXg4ufmnFaUjJo/edit",
+                                                     "https://docs.google.com/spreadsheets/d/1EoAfPj2hFcmlHo2ndfunLV4krkgJ2a69KlCi5NoYp0k/edit"),
+                                      projectNames = c("Isle","Isle","Isle","Isle","Isle","Isle","Isle")){
   
-  #List of all file names & corresponding dates
-  #Will have to change names accordingly
-  fileNames <- c("Observersheet1810.csv","Observersheet0612.csv","Observersheet1001.csv",
-                "Observersheet1108.csv","Observersheet1110.csv","Observersheet1312.csv",
-                "Observersheet2211.csv")
-  fileDates <- c(date=as.POSIXct(strptime("18-10-2017", "%d-%m-%Y")),
-                 date=as.POSIXct(strptime("06-12-2017", "%d-%m-%Y")),
-                 date=as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
-                 date=as.POSIXct(strptime("11-08-2017", "%d-%m-%Y")),
-                 date=as.POSIXct(strptime("11-10-2017", "%d-%m-%Y")),
-                 date=as.POSIXct(strptime("13-12-2017", "%d-%m-%Y")),
-                 date=as.POSIXct(strptime("12-11-2017", "%d-%m-%Y")))
-  #projectNames <- c()
+
               
   
   complete_dataset <- data.frame(timestamp=as.Date(character()), group=character(), activity=character(), 
@@ -109,14 +104,14 @@ processAllObservationData <- function(){
                                     student.id = character(), project = character(),
                                     date = as.Date(character()),global.id = character(), observer = character())
   
-  for (i in 1:length(fileNames)){
-    #Will have to change directory accordingly
-    directory <- paste("~/Documents/GitHub/project-days-data-analysis/src/",fileNames[i], sep = "")
-    raw_data <- read.csv(directory)
+  for (i in 1:length(fileURLs)){
+    raw_data <- as.data.frame(gsheet2tbl(fileURLs[i]))
     
     raw_data_head <- colnames(raw_data)
     
-    sheet_date <- fileDates[i]
+    
+    date_string <- raw_data[1,1]
+    sheet_date <- as.Date(date_string[1], format = "%d/%m/%Y")
     
     activity <- F
     observer <- F
@@ -152,17 +147,9 @@ processAllObservationData <- function(){
     if(observer){name_cols <- c(name_cols,"observer")}
     
 
-    
     processed_data <- processObservationData(raw_data, date = sheet_date, namecols = name_cols,
-                                             activitycol = activity, observercol = observer)
-    
-    #print(fileNames[i])
-    #print(names(complete_dataset))
-    #print(names(processed_data))
-    
-    #dataframe_dummy <- rbind(t(complete_dataset[2, ]), t(processed_data))
-    #rownames(dataframe_dummy) <- complete_dataset[1, ]
-    #complete_dataset <- dataframe_dummy
+                                             activitycol = activity, observercol = observer,
+                                             project = projectNames[i])
     
     complete_dataset <- rbind(complete_dataset, processed_data)
   }
