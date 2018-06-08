@@ -101,7 +101,7 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
                                                      "https://docs.google.com/spreadsheets/d/1FSqm57ygxaIFa5V5oUCx7ht21ayuxMm7MO2IeczZ7ww/edit",
                                                      "https://docs.google.com/spreadsheets/d/1zcq0lGaavcxjdeEOgc6uNtMGAEy_NqXg4ufmnFaUjJo/edit",
                                                      "https://docs.google.com/spreadsheets/d/1EoAfPj2hFcmlHo2ndfunLV4krkgJ2a69KlCi5NoYp0k/edit"),
-                                      projectNames = c("Isle","Isle","Isle","Isle","Isle","Isle","Isle")){
+                                      projectNames = c("Linnaruum","Linnaruum","Isle","Isle","Isle","Keha","Keha")){
   
 
               

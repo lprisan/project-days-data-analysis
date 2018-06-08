@@ -1,0 +1,104 @@
+---
+title: "Processing Observation Data from Learning Experiments"
+author: "Lewis Marsh and Luis P. Prieto"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(gsheet)
+
+source("../src/processObservationData.R")
+
+raw_data <- as.data.frame(gsheet2tbl("https://docs.google.com/spreadsheets/d/11BPHcSlqwozx3ffOQhQ5i5O8TRVa8xKoaw2uiny8k5A/edit"))
+```
+
+This R Markdown report aims to summarise the analyses done on the observation data of several sessions of innovative learning activities, from which multimodal data has been gathered
+
+# Observation data
+
+## Preprocessing
+
+The preprocessing is taken care by the R script in `src/processObservationData.R`. It consists of two main functions, `processObservationData` (to process the data of one session) and `processAllObservationData` (for multiple sessions).
+
+The first of these two functions,
+```
+data <- processObservationData(raw_data,
+                       date=as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
+                       project="Isle", 
+                       activitycol=F,
+                       observercol=F,
+                       namecols=c("timestamp","group",
+                            "StudentA","StudentB","StudentC","StudentD"))
+```
+takes in a dataframe with the raw observation data, together with some other parameters about the structure of the raw dataset and expected columns in the processed dataset, and returns a clean data frame with the observations for each individual.
+
+In the orginal data sheets, each entry lists the observation for a whole group of students (between 3 and 6
+usually) and the observations are listed as a piece of (predefined) text, such as "Talking with their group peers
+to solve the task" or "Totally disengaged".
+
+In the output this is broken up into individual entries for each student, for which a student variable is
+introduced. Furthermore, each possible observation is turned into a boolean variable for each of these entries,
+which makes it easier to conduct further statistical analysis of the dataset. Also, a column
+with additional notes from the original dataframe is dropped in the output, as it is difficult to make use of
+in a statistical test, and a global ID is created for each student, using the date, group, student number in the
+group and the project name. This will be of use when merging several datasets with the second function.
+
+As students undertook several tastks in some of the experiments/projects, the input variable "activitycol" indicates whether the function has to look for an extra activity column in the input data. This will be taken over
+one-to-one in the output or will be filled in with "Standard" if there was only one activity.
+Similarly, in some projects there were more than one observer placed onto each group to enable to test the
+reliability of the observers and the data they produce. The variable "observercol" tells the function whether
+there is a separate observer column to take over from the input data. Otherwise "1-A" is filled in for each
+observer.
+
+The second function, `processAllObservationData` takes in a vector of URLs in which the GoogleDocs
+containing the experimental data are stored in. It reads the data from the online sheets and places
+them in a dataframe. By examining the names of the columns in the dataframe, it detects whether there
+are activity or observation columns. By inspecting the first time stamp, it determines the date of the experiment.
+It then cleans the data using the first function and adds it to the end of a larger dataframe which
+eventually gets returned after the function has iterated through all URLs.
+
+### Example of Output
+To exhibit what the functions do, there is a brief example. We are given a data frame taken from
+one of the GoogleDocs:
+```{r first, include=FALSE}
+raw_data <- as.data.frame(gsheet2tbl("https://docs.google.com/spreadsheets/d/11BPHcSlqwozx3ffOQhQ5i5O8TRVa8xKoaw2uiny8k5A/edit"))
+```
+```{r second}
+raw_data[1,1:2]
+raw_data[1,3]
+```
+
+These are only two snippets of the data, as anything else would not fit onto this page.
+We see that the first two columns give a timestamp and the group. We furthermore see the oberservation for
+student A. There are 3 other students in the group with individual columns as well as
+a column for further comments.
+
+By applying the `processObservationData` function, we then see how the student variable is created
+and the observations are turned from text into boolean values. Furthermore, the activity and
+observer column have been created which makes it easier to merge and compare this data with other datasets.
+```{r third}
+processed_data <- processAllObservationData()
+summary(processed_data)
+str(processed_data)
+```
+
+### Spot checking the data
+
+Some tables to see what kind of data we have
+
+```{r}
+
+table(processed_data$date, processed_data$student)
+
+```
+
+@Lewis ... what is this "ann" student??
+
+## MCA
+
+....
+
+
