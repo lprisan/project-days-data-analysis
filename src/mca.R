@@ -44,7 +44,7 @@ add_mca_dimensions <- function(dataframe, mca = NULL, dimensions = 3){
   
   #Gets the extra columns from the MCA object and merges with original data
   extra_columns <- mca$ind$coord[,1:dimensions]
-  dataframe <- cbind(dataframe, extra_columns)
+  dataframe <- data.frame(dataframe, extra_columns)
   
   for(i in (ncol(dataframe)-dimensions+1):ncol(dataframe)){
     names(dataframe)[i] <- paste(c("MCAdim", (i+dimensions-ncol(dataframe))), collapse = "")
@@ -112,8 +112,8 @@ aggregate_by_groups <- function(dataframe){
   
   return_data <- dataframe %>%
     group_by(timestamp, group) %>%
-    summarize(MCAdim1 = sum(MCAdim1, na.rm = TRUE), MCAdim2 = sum(MCAdim2, na.rm = TRUE),
-              MCAdim3 = sum(MCAdim3, na.rm = TRUE), activity = first_element(activity),
+    summarize(MCAdim1 = mean(MCAdim1, na.rm = TRUE)*4, MCAdim2 = mean(MCAdim2, na.rm = TRUE)*4,
+              MCAdim3 = mean(MCAdim3, na.rm = TRUE)*4, activity = first_element(activity),
               observer = first_element(observer), project = first_element(project),
               date = first_element(date), comments = first_element(comments))
   

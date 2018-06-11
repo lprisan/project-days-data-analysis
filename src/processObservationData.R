@@ -1,6 +1,8 @@
 library(reshape2)
 library(gsheet)
 library(pracma)
+library(magrittr)
+library(dplyr)
 
 processObservationData <- function(data,
                                    date=as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
@@ -159,5 +161,19 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
   }
   
   complete_dataset
+}
+
+aggregate_on_observations <- function(dataframe){
+  return_data <- dataframe %>%
+    group_by(timestamp, group) %>%
+    summarize(disengaged = sum(disengaged, na.rm = TRUE), looking = sum(looking, na.rm = TRUE),
+              talking = sum(talking, na.rm = TRUE), technology = sum(technology, na.rm = TRUE),
+              resources = sum(resources, na.rm = TRUE),
+              external = sum(external, na.rm = TRUE), activity = first_element(activity),
+              observer = first_element(observer), project = first_element(project),
+              date = first_element(date), comments = first_element(comments))
+  
+  
+   return_data
 }
 
