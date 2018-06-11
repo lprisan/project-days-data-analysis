@@ -22,16 +22,18 @@ mca_analysis <- function(data, plots = T){
     print(fviz_screeplot(mca1, addlabels = TRUE, ylim = c(0, 45)))
   
     print(fviz_mca_var(mca1, col.var="orange", shape.var = 15, repel = TRUE))
-  
-    print(fviz_mca_var(mca1, choice = "mca.cor", 
-                  repel = F, # Avoid text overlapping (slow)
-                  ggtheme = theme_minimal()))
-  
-    factors <- c("disengaged","looking","talking","technology","resources","external")
-  
-    for (column in factors) {
-      print(fviz_ellipses(mca1, column, geom = "point"))
-    }
+
+    print(fviz_mca_var(mca1, axes=c(1,3), col.var="red", shape.var = 15, repel = TRUE))
+    
+    # print(fviz_mca_var(mca1, choice = "mca.cor", 
+    #               repel = F, # Avoid text overlapping (slow)
+    #               ggtheme = theme_minimal()))
+    # 
+    # factors <- c("disengaged","looking","talking","technology","resources","external")
+    # 
+    # for (column in factors) {
+    #   print(fviz_ellipses(mca1, column, geom = "point"))
+    # }
   }
   
   mca1
@@ -112,8 +114,8 @@ aggregate_by_groups <- function(dataframe){
   
   return_data <- dataframe %>%
     group_by(timestamp, group) %>%
-    summarize(MCAdim1 = mean(MCAdim1, na.rm = TRUE)*4, MCAdim2 = mean(MCAdim2, na.rm = TRUE)*4,
-              MCAdim3 = mean(MCAdim3, na.rm = TRUE)*4, activity = first_element(activity),
+    summarize(MCAdim1 = mean(MCAdim1, na.rm = TRUE), MCAdim2 = mean(MCAdim2, na.rm = TRUE),
+              MCAdim3 = mean(MCAdim3, na.rm = TRUE), activity = first_element(activity),
               observer = first_element(observer), project = first_element(project),
               date = first_element(date), comments = first_element(comments))
   
