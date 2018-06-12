@@ -126,7 +126,7 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
     
     #Detects whether there are several activities listed on the Observersheet
     #Problem with encoding of .csv file on Mac: "In which" should be what works on windows 
-    if(grepl(pattern = "In which", x = raw_data_head[3], fixed = TRUE)){activity <- T}
+    if(grepl(pattern = "which", x = raw_data_head[3], fixed = TRUE)){activity <- T}
     if(grepl(pattern = "observer", x = raw_data_head[length(raw_data_head)], fixed = TRUE)){observer <- T}
     
     #Counts the number of students per group on the the Observersheet
@@ -157,7 +157,7 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
                                              activitycol = activity, observercol = observer,
                                              project = projectNames[i])
     
-    complete_dataset <- rbind(complete_dataset, processed_data)
+    complete_dataset <- rbind.data.frame(complete_dataset, processed_data)
   }
   
   complete_dataset
