@@ -167,6 +167,7 @@ on groups and timestamps, summing up the MCA dimension.
 Let's take a look at the observer comments for the highest-lowest values of this "(not) active engagement":
 
 ```{r comments}
+# LUIS: For some reason I get an error here when knitting... does it generate the html for you? please clear all variables, knit the report and commit also the resulting html
 
 group_data %>% 
   filter(!is.na(.data$comments)) %>% 
@@ -221,6 +222,8 @@ a maximal number of states the function should try, an indicator if the data set
 number of states. The function then returns a fitted HMM model of the `depmix` class.
 We exhibit an example of such a visulisation here (although we do not use the function to reduce computational
 expense):
+
+-----> LUIS: why not? how long does it take to run? 
 
 ```{r}
 par(mfrow=c(2,1))
