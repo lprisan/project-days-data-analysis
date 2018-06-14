@@ -190,7 +190,7 @@ insert_hmm <- function(data, initial_state = 1){
   #set.seed(initial_state)
   
   HMMfit <- create_hmm_states_global(data, sorted = TRUE, visualise = FALSE)
-  post <- posterior(HMMfit)
+  post <- depmixS4::posterior(HMMfit)
   
   data$HMMPredS <- post$state
   data$HMMS1 <- post$S1

@@ -205,7 +205,7 @@ plotLDATopics(lda, n = 7)
 
 gammas <- tidy(lda, matrix = "gamma") # Probability of each document being in each topic
 
-
+detach("package:tidyverse", unload=TRUE)
 ```
 
 ## Hidden Markov Models in the Data Set
@@ -223,13 +223,10 @@ number of states. The function then returns a fitted HMM model of the `depmix` c
 We exhibit an example of such a visulisation here (although we do not use the function to reduce computational
 expense):
 
------> LUIS: why not? how long does it take to run? 
 
 ```{r}
-par(mfrow=c(2,1))
-plot(nstates, AIC, main="Minimise (Cirlces = AIC, Diamonds = BIC)")
-points(nstates, BIC, pch = 23)
-plot(nstates, logLik, main="Maximise", pch = 22)
+# This currently takes about 10 min to run. 7 states become too computationally expensive
+create_hmm_states_global(processed_data, visualise = TRUE, max_states = 6)
 ```
 
 Alternatively, it is also possible to train a Hidden Markov Model on the timeseries of merely one student,
@@ -259,9 +256,9 @@ observation variables are distributed over the states Using a model with three c
 example find:
 
 ```{r, include = F}
-cat1 <- subset(new_data, HMMPredS ==1)[,c("comments, disengaged", "looking", "talking", "technology", "resources", "external")]
-cat2 <- subset(new_data, HMMPredS ==2)[,c("comments, disengaged", "looking", "talking", "technology", "resources", "external")]
-cat3 <- subset(new_data, HMMPredS ==3)[,c("comments", "disengaged", "looking", "talking", "technology", "resources", "external")]
+cat1 <- subset(processed_data, HMMPredS ==1)[,c("comments", "disengaged", "looking", "talking", "technology", "resources", "external")]
+cat2 <- subset(processed_data, HMMPredS ==2)[,c("comments", "disengaged", "looking", "talking", "technology", "resources", "external")]
+cat3 <- subset(processed_data, HMMPredS ==3)[,c("comments", "disengaged", "looking", "talking", "technology", "resources", "external")]
 ```
 ```{r, include = T}
 summary(cat1)
@@ -286,7 +283,7 @@ holes into the air".
 
 Furthermore, we like to look at how the results of our HMM are correlated to the results of our MCA.
 ```{r, include = T}
-cor(new_data[,c("MCAdim1","MCAdim2","MCAdim3","HMMPredS","HMMS1","HMMS2","HMMS3")],
+cor(processed_data[,c("MCAdim1","MCAdim2","MCAdim3","HMMPredS","HMMS1","HMMS2","HMMS3")],
       use="complete.obs", method="kendall")
 ```
 
@@ -299,4 +296,15 @@ that if a student is engeged, no matter how efficiently, they are likely to stay
 On the other hand, the low correlation between MCA dimension one and the transition probablity to state
 two implies that the nature of engagement of a student may vary.
 
+Furthermore, we can see that the distribution of states is quite different accross the different days:
+
+```{r}
+par(mfrow=c(1,7))
+
+for(day in unique(processed_data$date)){
+  day_data <- subset(processed_data, date == day)[, c("date", "HMMPredS")]
+  counts <- c(nrow(subset(day_data, HMMPredS == 1)),nrow(subset(day_data, HMMPredS == 2)),nrow(subset(day_data, HMMPredS == 3)))
+  barplot(counts, main = day)
+}
+```
 
