@@ -205,7 +205,7 @@ plotLDATopics(lda, n = 7)
 
 gammas <- tidy(lda, matrix = "gamma") # Probability of each document being in each topic
 
-detach("package:tidyverse", unload=TRUE)
+#detach("package:tidyverse", unload=TRUE)
 ```
 
 ## Hidden Markov Models in the Data Set
