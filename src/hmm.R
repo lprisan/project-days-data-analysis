@@ -1,6 +1,7 @@
 library(depmixS4)
 library(quantmod)
 library(ggplot2)
+library(dplyr)
 
 
 create_hmm_states_student <- function(data, globalid, max_states = 3){
@@ -214,6 +215,31 @@ plot_development_by_student <- function(data, globalid){
         geom_smooth(data = student_data, aes(x = timestamp, y = HMMPredS), fill="red", colour="red", size=1)
   
   print(p)
+}
+
+state_analysis <- function(dataframe){
+  students <- unique(dataframe$global.id)
+  state_changes <- 0
+  ts_length <- 0
+  
+  for(student in students){
+    #Problem here. The filter function doesn't work as desired and only returns empty data frames
+    student_data <- filter(dataframe, global.id == student)
+    student_data <- student_data$HMMPredS
+    
+    last_state <- student_data[1]
+    ts_length <- ts_length + nrow(student_data)
+    
+    for(i in 2:length(student_data)){
+      if(student_data[i]!=last_state){
+        last_state <- student_data[i]
+        state_changes <- state_changes + 1
+      }
+    }
+  }
+  
+  ret <- c(state_changes/nrow(students), ts_length/nrow(students))
+  ret
 }
 
 

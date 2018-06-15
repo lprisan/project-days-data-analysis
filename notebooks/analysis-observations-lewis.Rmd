@@ -308,3 +308,30 @@ for(day in unique(processed_data$date)){
 }
 ```
 
+
+## Autoencoding
+The file `àuto_encoder.R` contains two functions to build an autoencoder. The first, `build_autoencoder(data)`,
+takes in a dataframe and returns a trained autoencoder. The dataset required the usual observation variables
+disengaged, looking, talking, technology, resources and external. It returns a model with one hidden layer
+containing 5 variables.
+
+The second function `get_predictions(data, model)` takes in a dataframe as above and returns the dataframe
+with predictions added for each observation variable, as well as a count of how many variables have been
+predicted incorrectly. The latter column is called `AEerr`.
+
+We can exhibit the behaviour of this function:
+```{r, include=FALSE}
+source("../src/auto_encoder.R")
+```
+
+```{r}
+training_and_test <- processed_data %>% filter(row_number() <= nrow(processed_data)*0.75)
+validation <- processed_data %>% filter(row_number() > nrow(processed_data)*0.75)
+
+model <- build_autoencoder(training_and_test)
+
+predictions <- get_predictions(validation, model)
+
+summary(predictions$AEerr)
+```
+
