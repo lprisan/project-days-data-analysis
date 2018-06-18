@@ -2,6 +2,7 @@ library(depmixS4)
 library(quantmod)
 library(ggplot2)
 library(dplyr)
+library(stringr)
 
 
 create_hmm_states_student <- function(data, globalid, max_states = 3){
@@ -222,13 +223,15 @@ state_analysis <- function(dataframe){
   state_changes <- 0
   ts_length <- 0
   
+
   for(student in students){
     #Problem here. The filter function doesn't work as desired and only returns empty data frames
-    student_data <- filter(dataframe, global.id == student)
+    student_data <- dataframe %>% dplyr::filter(str_detect(global.id, as.character(student)))
+    #student_data <- dplyr::filter(dataframe, !grepl(student, as.character(global.id)))
     student_data <- student_data$HMMPredS
     
     last_state <- student_data[1]
-    ts_length <- ts_length + nrow(student_data)
+    ts_length <- ts_length + length(student_data)
     
     for(i in 2:length(student_data)){
       if(student_data[i]!=last_state){
@@ -238,8 +241,7 @@ state_analysis <- function(dataframe){
     }
   }
   
-  ret <- c(state_changes/nrow(students), ts_length/nrow(students))
-  ret
+  return(c(state_changes/length(students), ts_length/length(students)))
 }
 
 

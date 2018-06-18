@@ -123,12 +123,13 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">Processing Observation Data from Learning Experiments</h1>
 <h4 class="author"><em>Lewis Marsh and Luis P. Prieto</em></h4>
-<h4 class="date"><em>15 June, 2018</em></h4>
+<h4 class="date"><em>18 June, 2018</em></h4>
 
 </div>
 
 
 <p>This R Markdown report aims to summarise the analyses done on the observation data of several sessions of innovative learning activities, from which multimodal data has been gathered</p>
+<p>Note: in order to compile this report and to run the <code>auto_encoder.R</code> file, one must install the <code>keras</code> package properly. I.e., one must call <code>install_keras()</code> prior to compiling/running.</p>
 <div id="observation-data" class="section level1">
 <h1>Observation data</h1>
 <div id="preprocessing" class="section level2">
@@ -484,7 +485,7 @@ model &lt;- build_autoencoder(training_and_test)</code></pre>
 
 summary(predictions$AEerr)</code></pre>
 <pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-##  0.0000  0.0000  0.0000  0.4299  1.0000  3.0000</code></pre>
+##  0.0000  0.0000  0.0000  0.5288  1.0000  3.0000</code></pre>
 </div>
 </div>
 

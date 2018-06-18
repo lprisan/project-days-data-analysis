@@ -25,6 +25,9 @@ BIC <- c(27385.87,25838.34,25193.96,24774.99,24584.34,24215.24)
 
 This R Markdown report aims to summarise the analyses done on the observation data of several sessions of innovative learning activities, from which multimodal data has been gathered
 
+Note: in order to compile this report and to run the `auto_encoder.R` file, one must install the `keras` package
+properly. I.e., one must call `install_keras()` prior to compiling/running.
+
 # Observation data
 
 ## Preprocessing
