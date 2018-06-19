@@ -4,6 +4,11 @@ library(factoextra)
 library(magrittr)
 library(dplyr)
 
+
+# Mainly based on:
+# http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/
+
+
 mca_analysis <- function(data, plots = T){
   mca_data <- data[,c("disengaged","looking","talking","technology","resources","external")]
   

@@ -170,7 +170,7 @@ on groups and timestamps, summing up the MCA dimension.
 Let's take a look at the observer comments for the highest-lowest values of this "(not) active engagement":
 
 ```{r comments, eval=F}
-# LUIS: For some reason I get an error here when knitting... does it generate the html for you? please clear all variables, knit the report and commit also the resulting html
+knittr::clean_cache()
 
 group_data %>% 
   filter(!is.na(.data$comments)) %>% 
@@ -337,4 +337,18 @@ predictions <- get_predictions(validation, model)
 
 summary(predictions$AEerr)
 ```
+
+Once we are satisfied with our model, we can add the units of the hidden layer to our dataframe, using the
+`insert_ae_units(data, model)` from the file.
+```{r}
+processed_data <- insert_ae_units(processed_data, model)
+```
+
+We can see that the new variables have a moderate correlation with the previously introduced MCA dimensions.
+This does not really come as a surprise, as both techniques are related to Principal Component Analysis (PCA).
+```{r}
+cor(processed_data[,c("MCAdim1","MCAdim2","MCAdim3","AEdim1","AEdim2","AEdim3")], use="complete.obs", method="kendall")
+```
+
+
 

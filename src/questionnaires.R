@@ -3,6 +3,8 @@ library(gsheet)
 library(readr)
 library(pracma)
 
+#Based on processObservationData.R
+
 
 load_intermediate_questionnaire <- function(url){
   raw_data <- as.data.frame(gsheet2tbl(url), check.names = FALSE, fileEncoding="UTF-8-BOM")

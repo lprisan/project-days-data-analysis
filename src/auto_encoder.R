@@ -8,6 +8,9 @@ library(cloudml)
 library(Metrics)
 
 
+#Mainly based on https://www.r-bloggers.com/deep-learning-in-r-2/
+
+
 build_autoencoder <- function(data){
   split <- round(nrow(data)/2)
   
@@ -99,6 +102,39 @@ get_predictions <- function(data, model){
   data$AEerror <- abs(data$disengaged-data$`1`) + abs(data$looking-data$`2`) + abs(data$talking-data$`3`) +
                     abs(data$technology-data$`4`) + abs(data$resources-data$`5`) + abs(data$external-data$`6`)
   
+  data
+}
+
+
+extract_hidden_layer <- function(data, model){
+  desc <- data %>% 
+    dplyr::select(disengaged, looking, talking, technology, resources, external) %>% 
+    get_desc()
+  
+  data <- data %>%
+    dplyr::select(disengaged, looking, talking, technology, resources, external) %>%
+    normalization_minmax(desc) %>%
+    as.matrix()
+  
+  layer <- model$layers[[1]]
+  intermediate_layer_model <- keras_model(inputs = model$input,
+                                          outputs = layer$output)
+  
+  intermediate_output <- predict(intermediate_layer_model, data)
+  
+  intermediate_output
+}
+
+
+insert_ae_units <- function(data, model){
+  new_columns <- extract_hidden_layer(data, model)
+  new_columns <- data.frame(new_columns)
+  
+  for(i in 1:ncol(new_columns)){
+    names(new_columns)[i] <-  paste(c("AEdim", i), collapse = "")
+  }
+  
+  data <- data.frame(data, new_columns)
   data
 }
 

@@ -5,6 +5,9 @@ library(dplyr)
 library(stringr)
 
 
+#Mainly based on https://cran.r-project.org/web/packages/depmixS4/vignettes/depmixS4.pdf
+
+
 create_hmm_states_student <- function(data, globalid, max_states = 3){
   #Selects data of the student passed on to the function
   student_data <- subset(new_data, global.id == globalid)
