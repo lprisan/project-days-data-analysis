@@ -2,6 +2,8 @@ library(reshape2)
 library(gsheet)
 library(readr)
 library(pracma)
+library(dplyr)
+library(stringr)
 
 #Based on processObservationData.R
 
@@ -83,6 +85,11 @@ load_all_intermediate_questionnaires <- function(
   
   complete_dataset$global.id <- paste(complete_dataset$date, complete_dataset$group, "Student", complete_dataset$student)
   
+  complete_dataset$id <- NA
+  for(i in 1:nrow(complete_dataset)){
+    complete_dataset[i, "id"] <- i
+  }
+  
   complete_dataset
 }
 
@@ -133,6 +140,34 @@ load_all_final_questionnaires <- function(
   complete_dataset$global.id <- paste(complete_dataset$date, complete_dataset$group, "Student", complete_dataset$student)
   
   complete_dataset
+}
+
+
+merge_with_data <- function(data, questionnaire){
+  students <- as.vector(unique(questionnaire$global.id))
+  data$questionnaire <- NA
+  
+  
+  for(student in students){
+    ### grepl doesnt work
+    answers <- filter(questionnaire, grepl(student, questionnaire$global.id, fixed = TRUE))
+    answers <- answers[order(answers$timestamp), c("timestamp", "date", "id", "global.id")]
+    
+    last_time <- as.POSIXct(paste(answers[1,2], "00:00:00"), format = "%Y-%m-%d %I:%M %p")
+    
+    for(i in 1:nrow(answers)){
+        # dplyr::filter(dplyr::filter(dplyr::filter(data, grepl(student,global.id, fixed = T)), timestamp <= answers[1,i]),
+        #     timestamp > last_time)$questionnaire <-i
+      for(j in 1:nrow(data)){
+        if(data[j,c("date")]<=answers[1,i] && data[j,c("date")]>last_time && grepl(student, data$global.id, fixed = T)){
+          data$questionnaire[j] <- answers$id[i]
+        }
+      }
+         last_time <- answers[1,i]
+    }
+  }
+  
+  return(data)
 }
 
 

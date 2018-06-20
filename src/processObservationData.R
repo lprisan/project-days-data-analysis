@@ -3,6 +3,7 @@ library(gsheet)
 library(pracma)
 library(magrittr)
 library(dplyr)
+library(stringr)
 
 processObservationData <- function(data,
                                    date=as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
@@ -47,7 +48,8 @@ processObservationData <- function(data,
      student_obs <- melt(obs_data, id=c(1:3,ncol(obs_data)), measure=4:(ncol(obs_data)-1), na.rm=T)
      names(student_obs)[[5]]<-"student"
    }
-  }
+   }
+  student_obs$group <- str_replace(student_obs$group, "Team", "Group")
   
  student_obs$disengaged <- as.numeric(grepl(pattern = "disengaged", x = student_obs$value, fixed = TRUE))
  student_obs$looking <- as.numeric(grepl(pattern = "Looking", x = student_obs$value, fixed = TRUE))
@@ -86,8 +88,8 @@ processObservationData <- function(data,
  student_obs$project <- project
  student_obs$date <- date
 
- student_obs$global.id <- paste(student_obs$project,student_obs$date,student_obs$student.id)
-
+ student_obs$global.id <- paste(student_obs$date,student_obs$student.id)
+ 
  student_obs
 }
 

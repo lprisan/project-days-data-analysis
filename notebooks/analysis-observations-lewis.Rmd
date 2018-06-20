@@ -169,20 +169,18 @@ on groups and timestamps, summing up the MCA dimension.
 
 Let's take a look at the observer comments for the highest-lowest values of this "(not) active engagement":
 
-```{r comments, eval=F}
-knittr::clean_cache()
-
+```{r comments, eval=T}
 group_data %>% 
   filter(!is.na(.data$comments)) %>% 
   filter(MCAdim1 > 1.2) %>% 
-  select(.data$MCAdim1,.data$comments) %>% 
+  dplyr::select(.data$MCAdim1,.data$comments) %>% 
   kable
 
 
 group_data %>% 
   filter(!is.na(.data$comments)) %>% 
   filter(MCAdim1 < -0.6) %>% 
-  select(.data$MCAdim1,.data$comments) %>% 
+  dplyr::select(.data$MCAdim1,.data$comments) %>% 
   kable
 
 
@@ -216,7 +214,7 @@ gammas <- tidy(lda, matrix = "gamma") # Probability of each document being in ea
 Another way of trying to detect structure in our data set is the theory of Hidden Markov Models. In
 the file `hmm.R` one can find several functions to generate Hidden Markov Models on our data set.
 The most central one is
-```{}
+```{r, eval=F}
 create_hmm_states_global(data, max_states = 3, sorted = F, visualise = T).
 ```
 It takes in a preprocessed data set (possibly but not neccesarily with added MCA dimensions),
@@ -347,8 +345,10 @@ processed_data <- insert_ae_units(processed_data, model)
 We can see that the new variables have a moderate correlation with the previously introduced MCA dimensions.
 This does not really come as a surprise, as both techniques are related to Principal Component Analysis (PCA).
 ```{r}
-cor(processed_data[,c("MCAdim1","MCAdim2","MCAdim3","AEdim1","AEdim2","AEdim3")], use="complete.obs", method="kendall")
+cor(processed_data[,c("MCAdim1","MCAdim2","MCAdim3","HMMPredS","AEdim1","AEdim2","AEdim3")], use="complete.obs", method="kendall")
 ```
 
-
+Even though we already have a quite good idea of what the MCA dimensions represent, a visual inspection
+of the highest and lowest scoring comments of the auto encoder output variables does not suggest
+any trend in general and does not make a correlation with the MCA dimension visible in particular.
 
