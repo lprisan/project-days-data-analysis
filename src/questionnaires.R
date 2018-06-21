@@ -9,7 +9,7 @@ library(stringr)
 
 
 load_intermediate_questionnaire <- function(url){
-  raw_data <- as.data.frame(gsheet2tbl(url), check.names = FALSE, fileEncoding="UTF-8-BOM")
+  raw_data <- as.data.frame(gsheet2tbl(url), check.names = FALSE, fileEncoding="UTF-8")
   
   if(ncol(raw_data)>11){
     raw_data <- raw_data[, 1:11]
@@ -102,7 +102,7 @@ load_final_questionnaire <- function(url){
   }
   
   names(raw_data) <- c("timestamp", "group", "student", "strategy", "roles", "satisfaction", "improvements",
-                       "difficulty", "tech.problems", "comments")
+                       "ease", "tech.problems", "comments")
   
   raw_data$satisfaction <- as.integer(raw_data$satisfaction)
   raw_data$difficulty <- as.integer(raw_data$difficulty)
@@ -124,7 +124,7 @@ load_all_final_questionnaires <- function(
   
   complete_dataset <- data.frame(timestamp=as.Date(character()), group=character(),
                                  student = character(), strategy = character(), roles = character(),
-                                 satisfaction = as.integer(), improvements = character(), difficulty = as.integer(),
+                                 satisfaction = as.integer(), improvements = character(), ease = as.integer(),
                                  tech.problems = character(), comments = as.integer(),
                                  date = as.Date(character()))
   
@@ -147,23 +147,38 @@ merge_with_data <- function(data, questionnaire){
   students <- as.vector(unique(questionnaire$global.id))
   data$questionnaire <- NA
   
+  #data$timestamp <- as.POSIXct(data$timestamp, format = "%d/%m/%Y %I:%M:%S")
+  
   
   for(student in students){
     ### grepl doesnt work
-    answers <- filter(questionnaire, grepl(student, questionnaire$global.id, fixed = TRUE))
+    answers <- filter(questionnaire, grepl(student, global.id, fixed = TRUE))
     answers <- answers[order(answers$timestamp), c("timestamp", "date", "id", "global.id")]
+    answers <- filter(answers, grepl(student, answers$global.id, fixed = TRUE))
     
-    last_time <- as.POSIXct(paste(answers[1,2], "00:00:00"), format = "%Y-%m-%d %I:%M %p")
+    #answers$timestamp <- as.POSIXct(answers$timestamp, format = "%d/%m/%Y %H:%M:%S")
+    
+    last_time <- as.POSIXct(paste(answers[1,2], "00:00:01", sep = " "), format = "%Y-%m-%d %H:%M:%S")
     
     for(i in 1:nrow(answers)){
-        # dplyr::filter(dplyr::filter(dplyr::filter(data, grepl(student,global.id, fixed = T)), timestamp <= answers[1,i]),
-        #     timestamp > last_time)$questionnaire <-i
+        # dplyr::filter(dplyr::filter(dplyr::filter(data, grepl(student,global.id, fixed = T)),
+        #     as.POSIXct(timestamp, format = "%d/%m/%Y %H:%M:%S") <= as.POSIXct(answers[1,i],format = "%d/%m/%Y %H:%M:%S")),
+        #     as.POSIXct(timestamp, format = "%d/%m/%Y %H:%M:%S") > last_time)$questionnaire <- i
+
+        # if(nrow(layer) > 0){
+        #   layer$quesionnaire <- i
+        # }
       for(j in 1:nrow(data)){
-        if(data[j,c("date")]<=answers[1,i] && data[j,c("date")]>last_time && grepl(student, data$global.id, fixed = T)){
-          data$questionnaire[j] <- answers$id[i]
+        date <- as.POSIXct(data[j,c("timestamp")], format = "%d/%m/%Y %H:%M:%S")
+        compare <- as.POSIXct(answers[i,1], format = "%d/%m/%Y %H:%M:%S")
+        print(paste(date, compare, student))
+        if(!is.na(compare)){
+          if(date <= compare && date>last_time && strcmp(student, data$global.id[j])){
+            data$id[j] <- answers$id[i]
+          }
         }
+        last_time <- compare
       }
-         last_time <- answers[1,i]
     }
   }
   
