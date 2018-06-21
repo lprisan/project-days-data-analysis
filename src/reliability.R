@@ -151,6 +151,54 @@ for(i in 6:11){ #For each of the variables disengaged, looking, etc
   #irrdata <- rbind(gr1,gr2)
 }
 
+normalise <- function(data, columns){
+  for(column in columns){
+    data[, column] <- (data[, column] - mean(data[, column])) / var(data[, column])
+  }
+  
+  data
+}
+
+test_ae_for_observers <- function(data, selected_columns = c("AEdim1", "AEdim2", "AEdim3")){
+  data$timeofday <- getTimeofday(data)
+  
+  results <- data.frame()
+  for(i in selected_columns){ #For each of the variables disengaged, looking, etc
+    print(i)
+    results[nrow(results)+1,"var"] <- i
+    ob1a <- data %>% filter(observer=="1-A") %>% select(timeofday,student.id,i)
+    ob1b <- data %>% filter(observer=="1-B") %>% select(timeofday,student.id,i)
+    gr1 <- matchObs(ob1b,ob1a)
+    results[nrow(results),"group"] <- "Group1"
+    # Cohen's Kappa
+    k1 <- kappa2(gr1[,c(3,4)], "unweighted")
+    print(kappa2(gr1[,c(3,4)], "unweighted"))
+    results[nrow(results),"kappa"] <- k1$value
+    results[nrow(results),"kappa.p"] <- k1$p.value
+    # Krippendorf's alpha
+    a1 <- kripp.alpha(t(as.matrix(gr1[,c(3,4)])), method="interval")
+    print(kripp.alpha(t(as.matrix(gr1[,c(3,4)])), method="interval"))
+    results[nrow(results),"alpha"] <- a1$value
+    
+    results[nrow(results)+1,"var"] <- names(df)[i]
+    ob2a <- data %>% filter(observer=="2-A") %>% select(timeofday,student.id,i)
+    ob2b <- data %>% filter(observer=="2-B") %>% select(timeofday,student.id,i)
+    gr2 <- matchObs(ob2a,ob2b)
+    results[nrow(results),"group"] <- "Group2"
+    # Cohen's Kappa
+    k2 <- kappa2(gr2[,c(3,4)], "unweighted")
+    print(kappa2(gr2[,c(3,4)], "unweighted"))
+    results[nrow(results),"kappa"] <- k2$value
+    results[nrow(results),"kappa.p"] <- k2$p.value
+    # Krippendorf's alpha
+    a2 <- kripp.alpha(t(as.matrix(gr2[,c(3,4)])), method="interval")
+    print(kripp.alpha(t(as.matrix(gr2[,c(3,4)])), method="interval"))
+    results[nrow(results),"alpha"] <- a2$value
+  }
+  
+  results
+}
+
 # All results
 ggplot(results, aes(x="ALL", y=kappa))+geom_boxplot()+theme_minimal()
 ggplot(results, aes(x="ALL", y=alpha))+geom_boxplot()+theme_minimal()
