@@ -123,7 +123,7 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">Processing Observation Data from Learning Experiments</h1>
 <h4 class="author"><em>Lewis Marsh and Luis P. Prieto</em></h4>
-<h4 class="date"><em>20 June, 2018</em></h4>
+<h4 class="date"><em>22 June, 2018</em></h4>
 
 </div>
 
@@ -618,28 +618,70 @@ model &lt;- build_autoencoder(training_and_test)</code></pre>
 
 summary(predictions$AEerr)</code></pre>
 <pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-##   0.000   0.000   0.000   0.558   1.000   4.000</code></pre>
+##  0.0000  0.0000  0.0000  0.5489  1.0000  4.0000</code></pre>
 <p>Once we are satisfied with our model, we can add the units of the hidden layer to our dataframe, using the <code>insert_ae_units(data, model)</code> from the file.</p>
 <pre class="r"><code>processed_data &lt;- insert_ae_units(processed_data, model)</code></pre>
 <p>We can see that the new variables have a moderate correlation with the previously introduced MCA dimensions. This does not really come as a surprise, as both techniques are related to Principal Component Analysis (PCA).</p>
 <pre class="r"><code>cor(processed_data[,c(&quot;MCAdim1&quot;,&quot;MCAdim2&quot;,&quot;MCAdim3&quot;,&quot;HMMPredS&quot;,&quot;AEdim1&quot;,&quot;AEdim2&quot;,&quot;AEdim3&quot;)], use=&quot;complete.obs&quot;, method=&quot;kendall&quot;)</code></pre>
 <pre><code>##              MCAdim1     MCAdim2     MCAdim3    HMMPredS      AEdim1
-## MCAdim1   1.00000000  0.02282555  0.05704291 -0.24371794 -0.33030581
-## MCAdim2   0.02282555  1.00000000 -0.01752765 -0.33057757 -0.48654277
-## MCAdim3   0.05704291 -0.01752765  1.00000000 -0.15886164 -0.22928078
-## HMMPredS -0.24371794 -0.33057757 -0.15886164  1.00000000  0.50570056
-## AEdim1   -0.33030581 -0.48654277 -0.22928078  0.50570056  1.00000000
-## AEdim2    0.53178842 -0.31236260 -0.16239271  0.03464363  0.11964991
-## AEdim3    0.07761265 -0.24002315 -0.12001252 -0.04001418 -0.03976306
-##               AEdim2      AEdim3
-## MCAdim1   0.53178842  0.07761265
-## MCAdim2  -0.31236260 -0.24002315
-## MCAdim3  -0.16239271 -0.12001252
-## HMMPredS  0.03464363 -0.04001418
-## AEdim1    0.11964991 -0.03976306
-## AEdim2    1.00000000 -0.10982885
-## AEdim3   -0.10982885  1.00000000</code></pre>
+## MCAdim1   1.00000000  0.02282555  0.05704291 -0.24371794 -0.20019248
+## MCAdim2   0.02282555  1.00000000 -0.01752765 -0.33057757 -0.24448307
+## MCAdim3   0.05704291 -0.01752765  1.00000000 -0.15886164  0.02347464
+## HMMPredS -0.24371794 -0.33057757 -0.15886164  1.00000000  0.19067889
+## AEdim1   -0.20019248 -0.24448307  0.02347464  0.19067889  1.00000000
+## AEdim2   -0.45434964  0.46098764  0.20144083 -0.07388949 -0.04430840
+## AEdim3    0.36451069  0.28608584  0.34926715 -0.22240960  0.01601506
+##                AEdim2       AEdim3
+## MCAdim1  -0.454349642  0.364510685
+## MCAdim2   0.460987637  0.286085844
+## MCAdim3   0.201440832  0.349267154
+## HMMPredS -0.073889486 -0.222409605
+## AEdim1   -0.044308400  0.016015061
+## AEdim2    1.000000000 -0.006015253
+## AEdim3   -0.006015253  1.000000000</code></pre>
 <p>Even though we already have a quite good idea of what the MCA dimensions represent, a visual inspection of the highest and lowest scoring comments of the auto encoder output variables does not suggest any trend in general and does not make a correlation with the MCA dimension visible in particular.</p>
+</div>
+<div id="loading-questionnaires" class="section level2">
+<h2>Loading Questionnaires</h2>
+<p>In order to load the questionnaire data to an R dataframe, we have created the file <code>questionnaires.R</code>. It contains two functions of interest: <code>load_all_intermediate_questionnaires(urls)</code> and <code>load_all_final_questionnaires(urls)</code>. Both have all questionnaire urls as default arguments and return a single data frame containing the data of all questionnaires of a respective type. We exhibit its usage here:</p>
+<pre class="r"><code>iq_data &lt;- load_all_intermediate_questionnaires()</code></pre>
+<pre><code>## Warning: Missing column names filled in: 'X11' [11], 'X12' [12]</code></pre>
+<pre class="r"><code>fq_data &lt;- load_all_final_questionnaires()</code></pre>
+<p>In these two new data sets one will find columns called id. This is a unique identifier for each element in these dataframes and is used by the function <code>merge_with_data(data, iq, fq)</code>, who adds columns to the observer dataset in which each observation is linked to the questionnaire data via the numbers in the id columns. These new columns are called int.questionnaire and fin.questionnaire.</p>
+<pre class="r"><code>merged_data &lt;- merge_with_data(processed_data, iq=iq_data, fq=fq_data)</code></pre>
+</div>
+<div id="testing-reliability-of-observers" class="section level2">
+<h2>Testing Reliability of Observers</h2>
+<p>In the file <code>reliability.R</code> we can find some useful tools to check the reliability of observers. Most important are the functions <code>test_cont_vars_for_observers(data, selected_columns)</code> and <code>test_discrete_vars_for_observers(data, selected_columns)</code>. Both take in a data frame generated by our preprocessing function, potentially with some added variables, and a vector which contains the names of the variables one wants to analyse. It returns an analysis that depends on whether the function for discrete or the function for continuous variables is used. In the discrete case in returns an analysis in terms of Cohen’s Kappa and Krippendorf’s alpha, while for continuous variables it only returns the latter. Note that continuous variables should be normalised using the <code>normalise(data, columns)</code> function and that the variables should be added to the data frame before the observations which have two different observers are filtred out. Otherwise, we cannot guarantee that the variables still have same meaning as we have interpreted before. We can see that for most variables there is a discrepancy between the two observers:</p>
+<pre class="r"><code>test_discrete_vars_for_observers(processed_data, c(&quot;disengaged&quot;,&quot;looking&quot;,&quot;talking&quot;,&quot;technology&quot;,&quot;resources&quot;,&quot;external&quot;))</code></pre>
+<pre><code>##           var  group        kappa      kappa.p       alpha
+## 1  disengaged Group1 -0.046728972 6.757417e-01 -0.04958678
+## 2  disengaged Group2  0.394904459 1.531099e-05  0.37396352
+## 3     looking Group1  0.310179641 5.198468e-03  0.28473091
+## 4     looking Group2  0.382532160 3.505219e-04  0.36554622
+## 5     talking Group1  0.073047859 4.926580e-01  0.02859993
+## 6     talking Group2 -0.009661836 9.301810e-01 -0.01404151
+## 7  technology Group1  0.466110532 1.091510e-04  0.46129374
+## 8  technology Group2  0.522388060 1.827457e-06  0.51602564
+## 9   resources Group1  0.430830040 5.117209e-04  0.43303571
+## 10  resources Group2  0.651622003 2.766748e-09  0.64637002
+## 11   external Group1  0.433628319 5.056356e-04  0.43743079
+## 12   external Group2  0.346364347 2.357262e-03  0.34862745</code></pre>
+<pre class="r"><code>df &lt;- normalise(processed_data, c(&quot;MCAdim1&quot;,&quot;MCAdim2&quot;,&quot;MCAdim3&quot;,&quot;AEdim1&quot;,&quot;AEdim2&quot;,&quot;AEdim3&quot;))
+test_cont_vars_for_observers(df, c(&quot;MCAdim1&quot;,&quot;MCAdim2&quot;,&quot;MCAdim3&quot;,&quot;AEdim1&quot;,&quot;AEdim2&quot;,&quot;AEdim3&quot;))</code></pre>
+<pre><code>##        var  group         alpha
+## 1  MCAdim1 Group1  3.980122e-01
+## 2     &lt;NA&gt; Group2  3.984108e-01
+## 3  MCAdim2 Group1  4.623139e-01
+## 4     &lt;NA&gt; Group2  5.348614e-01
+## 5  MCAdim3 Group1  2.681363e-01
+## 6     &lt;NA&gt; Group2  1.920647e-01
+## 7   AEdim1 Group1 -8.707250e-06
+## 8     &lt;NA&gt; Group2  2.935365e-01
+## 9   AEdim2 Group1  6.493985e-01
+## 10    &lt;NA&gt; Group2  4.497924e-01
+## 11  AEdim3 Group1  2.775216e-01
+## 12    &lt;NA&gt; Group2  5.172727e-01</code></pre>
 </div>
 </div>
 

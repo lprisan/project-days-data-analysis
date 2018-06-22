@@ -155,7 +155,7 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
     
     if(observer){name_cols <- c(name_cols,"observer")}
     
-    processed_data <- processObservationData::processObservationData(raw_data, date = sheet_date, namecols = name_cols,
+    processed_data <- processObservationData(raw_data, date = sheet_date, namecols = name_cols,
                                              activitycol = activity, observercol = observer,
                                              project = projectNames[i])
     
