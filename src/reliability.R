@@ -144,7 +144,3 @@ test_cont_vars_for_observers <- function(data, selected_columns = c("AEdim1", "A
 # ggplot(results, aes(x=group, y=kappa))+geom_boxplot()+theme_minimal()
 # ggplot(results, aes(x=group, y=alpha))+geom_boxplot()+theme_minimal()
 
-
-
-
-

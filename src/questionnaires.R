@@ -6,16 +6,20 @@ library(dplyr)
 library(stringr)
 library(tidyverse)
 
+#source("processObservationData.R")
+
 #Based on processObservationData.R
 
 
 load_intermediate_questionnaire <- function(url, date_type){
   raw_data <- as.data.frame(gsheet2tbl(url), check.names = FALSE, fileEncoding="UTF-8")
   
+  #Checks whether there is already a data analysis in the gdoc (right of data) and removes it
   if(ncol(raw_data)>11){
     raw_data <- raw_data[, 1:11]
   }
   
+  #Checks whether the contribution is listed twice and removes it
   if(grepl(pattern = "(quantitative)", x = names(raw_data)[6], fixed = TRUE)){
     raw_data <- raw_data[, c(1:4,6:ncol(raw_data))]
   }
@@ -56,6 +60,8 @@ load_intermediate_questionnaire <- function(url, date_type){
   raw_data$kadriorg <- parse_number(raw_data$kadriorg)
   
   date_string <- raw_data[1,1]
+  
+  #some sheets have european (d/m/y) date format, some american (m/d/y)
   if(strcmp(date_type, "european")){
     sheet_date <- as.Date(date_string[1], format = "%d/%m/%Y")
     raw_data$timestamp <- format(as.POSIXct(raw_data$timestamp, format = "%d/%m/%Y %H:%M:%S"), "%d/%m/%Y %H:%M:%S")
@@ -66,6 +72,9 @@ load_intermediate_questionnaire <- function(url, date_type){
   }
   
   raw_data$date <- sheet_date
+  
+  project <- dplyr::filter(get_project_names(), dates == strftime(sheet_date, format = "%d/%m/%Y"))[1,2]
+  raw_data$project <- project
   
   raw_data
 }
@@ -84,7 +93,8 @@ load_all_intermediate_questionnaires <- function(
                                  student = character(), contribution = as.integer(),
                                  difficulty = as.integer(), prepared = as.integer(), satisfaction = as.integer(),
                                  collaboration = as.integer(), kadriorg = as.integer(),
-                                 challenges = character(), skills = character(), date = as.Date(character()))
+                                 challenges = character(), skills = character(), date = as.Date(character()),
+                                 project = as.character())
   
   for(i in 1:length(urls)){
     new_dataset <- load_intermediate_questionnaire(urls[i], date_format[i])
@@ -117,6 +127,9 @@ load_final_questionnaire <- function(url, date_type){
   raw_data$ease <- as.integer(raw_data$ease)
   
   date_string <- raw_data[1,1]
+  
+  date_string <- strsplit(date_string, " ")[[1]]
+  date_string <- date_string[1]
 
   if(strcmp(date_type, "european")){
     sheet_date <- as.Date(date_string[1], format = "%d/%m/%Y")
@@ -128,6 +141,9 @@ load_final_questionnaire <- function(url, date_type){
   }
   
   raw_data$date <- sheet_date
+  
+  project <- dplyr::filter(get_project_names(), dates == strftime(sheet_date, format = "%d/%m/%Y"))[1,2]
+  raw_data$project <- project
   
   raw_data
 }
@@ -144,7 +160,7 @@ load_all_final_questionnaires <- function(
                                  student = character(), strategy = character(), roles = character(),
                                  satisfaction = as.integer(), improvements = character(), ease = as.integer(),
                                  tech.problems = character(), comments = as.integer(),
-                                 date = as.Date(character()))
+                                 date = as.Date(character()), project = as.character())
   
   for(i in 1:length(urls)){
     new_dataset <- load_final_questionnaire(urls[i], date_format[i])
@@ -169,7 +185,7 @@ load_all_final_questionnaires <- function(
 
 
 
-merge_with_data <- function(data, iq, fq){
+match_with_data <- function(data, iq, fq){
    students <- unique(fq$global.id)
    data$int.questionnaire <- NA
    data$fin.questionnaire <- NA
@@ -193,14 +209,14 @@ merge_with_data <- function(data, iq, fq){
      filtered_data$timestamp <- as.POSIXct(filtered_data$timestamp, format = "%d/%m/%Y %H:%M:%S")
      
      if(nrow(i_answers) > 0 && nrow(filtered_data) > 0){
-      for(i in 1:nrow(i_answers)){
+      for(i in nrow(i_answers):1){
         for(j in 1:nrow(filtered_data)){
           #print(filtered_data[j, "timestamp"])
           #print(i_answers[i, "timestamp"])
           if(!is.na(filtered_data[j, "timestamp"]) &&
              as.POSIXct(filtered_data[j, "timestamp"], format = "%Y-%m-%d %H:%M:%S")
-             <= as.POSIXct(i_answers[nrow(i_answers)+1-i, "timestamp"], format = "%d/%m/%Y %H:%M:%S")){
-            filtered_data[j, "int.questionnaire"] <- i_answers[nrow(i_answers)+1-i, "id"]
+             <= as.POSIXct(i_answers[i, "timestamp"], format = "%d/%m/%Y %H:%M:%S")){
+            filtered_data[j, "int.questionnaire"] <- i_answers[i, "id"]
           }
         }
       }
@@ -213,6 +229,78 @@ merge_with_data <- function(data, iq, fq){
    ret
 }
 
+merge_and_aggregate <- function(data, iq, fq){
+  #### The dataset given to this function must contain exactly three MCA dimension variables and exactly
+  #### three AE unit variables
+  
+  # if(is.na(data)){
+  #   data <- match_with_data(data, iq, fq)
+  # }
+  
+  ## Removes all entries without matching intermediate questionnaire
+  data <- dplyr::group_by(data, data$int.questionnaire)
+  data <- dplyr::filter(data, !is.na(data$int.questionnaire))
+  data <- dplyr::ungroup(data())
+  
+  ## Aggregates data by intermediate and final questionnaires
+  data <- data %>%
+    dplyr::group_by(data$int.questionnaire, data$fin.questionnaire) %>%
+    dplyr::summarize(global.id = first_element(global.id),
+      disengaged = mean(data$disengaged, na.rm = TRUE), looking = mean(data$looking, na.rm = TRUE),
+              talking = mean(data$talking, na.rm = TRUE), technology = mean(data$technology, na.rm = TRUE),
+              resources = mean(data$resources, na.rm = TRUE),
+              external = mean(data$external, na.rm = TRUE), activity = first_element(data$activity),
+              observer = first_element(data$observer), project = first_element(data$project),
+              date = first_element(data$date), comments = first_element(data$comments),
+              MCAdim1 = mean(data$MCAdim1, na.rm = TRUE), MCAdim2 = mean(data$MCAdim2, na.rm = TRUE),
+              MCAdim3 = mean(data$MCAdim3, na.rm = TRUE), AEdim1 = mean(data$AEdim1, na.rm = TRUE),
+              AEdim2 = mean(data$AEdim2, na.rm = TRUE), AEdim3 = mean(data$AEdim3, na.rm = TRUE))
+  
+  data$contribution <- NA
+  data$difficulty <- NA
+  data$prepared <- NA
+  data$i_satisfaction <- NA
+  data$collaboration <- NA
+  data$kariorg <- NA
+  data$challanges <- NA
+  data$skills <- NA
+  
+  data$strategy <- NA
+  data$roles <- NA
+  data$f_satisfaction <- NA
+  data$improvements <- NA
+  data$ease <- NA
+  data$tech.problems <- NA
+  data$comments <- NA
+  
+  ## Fetches the values from the matching intermediate and final questionnaires
+  for(i in 1:nrow(data)){
+    intermediate <- dplyr::filter(iq, id == data[i, "int.questionnaire"][[1]])
+    final <- dplyr::filter(fq, id == data[i, "fin.questionnaire"][[1]])
+    
+    data$contribution[i] <- intermediate[1, "contribution"]
+    data$difficulty[i] <- intermediate[1, "difficulty"]
+    data$prepared[i] <- intermediate[1, "prepared"]
+    data$i_satisfaction[i] <- intermediate[1, "satisfaction"]
+    data$collaboration[i] <- intermediate[1, "collaboration"]
+    data$kariorg[i] <- intermediate[1, "kadriorg"]
+    data$challanges[i] <- intermediate[1, "challenges"]
+    data$skills[i] <- intermediate[1, "skills"]
+    
+    data$strategy[i] <- final[1, "strategy"]
+    data$roles[i] <- final[1, "roles"]
+    data$f_satisfaction[i] <- final[1, "satisfaction"]
+    data$improvements[i] <- final[1, "improvements"]
+    data$ease[i] <- final[1, "ease"]
+    data$tech.problems[i] <- final[1, "tech.problems"]
+    data$comments[i] <- final[1, "comments"]
+  }
+  
+  data <- data[, 3:ncol(data)]
+  
+  data
+}
+
 
 getTimeofday <- function(date){
   timeofday <- as.POSIXct(strptime(paste(hour(date),
@@ -220,5 +308,10 @@ getTimeofday <- function(date){
                                               second(date), sep=":"),
                                         "%H:%M:%S"))
   timeofday
+}
+
+first_element <- function(data){
+  ret <- data[1]
+  ret
 }
 

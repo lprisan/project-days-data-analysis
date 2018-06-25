@@ -348,7 +348,7 @@ This does not really come as a surprise, as both techniques are related to Princ
 cor(processed_data[,c("MCAdim1","MCAdim2","MCAdim3","HMMPredS","AEdim1","AEdim2","AEdim3")], use="complete.obs", method="kendall")
 ```
 
-Even though we already have a quite good idea of what the MCA dimensions represent, a visual inspection
+Even though we already have a quite good idea of what the MCA dimensions represent, a visual inspection (not pictured)
 of the highest and lowest scoring comments of the auto encoder output variables does not suggest
 any trend in general and does not make a correlation with the MCA dimension visible in particular.
 
@@ -372,14 +372,30 @@ fq_data <- load_all_final_questionnaires()
 ```
 
 In these two new data sets one will find columns called id. This is a unique identifier for each element in these
-dataframes and is used by the function `merge_with_data(data, iq, fq)`, who adds columns to the observer dataset
+dataframes and is used by the function `match_with_data(data, iq, fq)`, who adds columns to the observer dataset
 in which each observation is linked to the questionnaire data via the numbers in the id columns.
 These new columns are called int.questionnaire and fin.questionnaire.
 
 ```{r}
-merged_data <- merge_with_data(processed_data, iq=iq_data, fq=fq_data)
+matched_data <- match_with_data(processed_data, iq=iq_data, fq=fq_data)
 ```
 
+Once we have matched the data with the questionnaires, we can merge and aggregate the data by a function in the same
+file in the following way:
+
+```{r}
+agg_data <- merge_and_aggregate(processed_data, iq_data, fq_data)
+```
+
+The dataset given to this function must contain exactly three MCA dimension variables and exactly three
+autoencoder unit variables.
+
+However, by visual inspection we can see that there is no particularly high correleation between any of the
+observer variables and the student response variables:
+
+```{r}
+cor(agg_data[, c("disengaged", "looking", "talking", "technology", "resources", "contribution", "difficulty", "prepared", "i_satisfaction", "f_satisfaction")], method = "kendall")
+```
 
 ## Testing Reliability of Observers
 
