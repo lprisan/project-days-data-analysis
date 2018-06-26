@@ -229,17 +229,18 @@ match_with_data <- function(data, iq, fq){
    ret
 }
 
-merge_and_aggregate <- function(data, iq, fq){
+merge_and_aggregate <- function(data, iq, fq, sparseAE = F){
   #### The dataset given to this function must contain exactly three MCA dimension variables and exactly
   #### three AE unit variables
   
   data <- dplyr::filter(data, !is.na(data$int.questionnaire))
   
   ## Aggregates data by intermediate and final questionnaires
-  data <- data %>%
-    dplyr::group_by(int.questionnaire, fin.questionnaire) %>%
-    dplyr::summarize(global.id = first_element(global.id),
-      disengaged = mean(disengaged, na.rm = TRUE), looking = mean(looking, na.rm = TRUE),
+  if(sparseAE){
+    data <- data %>%
+      dplyr::group_by(int.questionnaire, fin.questionnaire) %>%
+      dplyr::summarize(global.id = first_element(global.id),
+        disengaged = mean(disengaged, na.rm = TRUE), looking = mean(looking, na.rm = TRUE),
               talking = mean(talking, na.rm = TRUE), technology = mean(technology, na.rm = TRUE),
               resources = mean(resources, na.rm = TRUE),
               external = mean(external, na.rm = TRUE), activity = first_element(activity),
@@ -247,7 +248,25 @@ merge_and_aggregate <- function(data, iq, fq){
               date = first_element(date), comments = first_element(comments),
               MCAdim1 = mean(MCAdim1, na.rm = TRUE), MCAdim2 = mean(MCAdim2, na.rm = TRUE),
               MCAdim3 = mean(MCAdim3, na.rm = TRUE), AEdim1 = mean(AEdim1, na.rm = TRUE),
-              AEdim2 = mean(AEdim2, na.rm = TRUE), AEdim3 = mean(AEdim3, na.rm = TRUE), n = n())
+              AEdim2 = mean(AEdim2, na.rm = TRUE), AEdim3 = mean(AEdim3, na.rm = TRUE),
+              SpAEdim1 = mean(AEdim1, na.rm = TRUE),
+              SpAEdim2 = mean(AEdim2, na.rm = TRUE), SpAEdim3 = mean(AEdim3, na.rm = TRUE),n = n())
+  }
+  else{
+    data <- data %>%
+      dplyr::group_by(int.questionnaire, fin.questionnaire) %>%
+      dplyr::summarize(global.id = first_element(global.id),
+                       disengaged = mean(disengaged, na.rm = TRUE), looking = mean(looking, na.rm = TRUE),
+                       talking = mean(talking, na.rm = TRUE), technology = mean(technology, na.rm = TRUE),
+                       resources = mean(resources, na.rm = TRUE),
+                       external = mean(external, na.rm = TRUE), activity = first_element(activity),
+                       observer = first_element(observer), project = first_element(project),
+                       date = first_element(date), comments = first_element(comments),
+                       MCAdim1 = mean(MCAdim1, na.rm = TRUE), MCAdim2 = mean(MCAdim2, na.rm = TRUE),
+                       MCAdim3 = mean(MCAdim3, na.rm = TRUE), AEdim1 = mean(AEdim1, na.rm = TRUE),
+                       AEdim2 = mean(AEdim2, na.rm = TRUE), AEdim3 = mean(AEdim3, na.rm = TRUE), n = n())
+  }
+  
   
   data$contribution <- NA
   data$difficulty <- NA

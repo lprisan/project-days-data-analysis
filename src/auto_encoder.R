@@ -106,6 +106,62 @@ get_predictions <- function(data, model){
 }
 
 
+build_sparse_autoencoder <- function(data){
+  split <- round(nrow(data)/2)
+  
+  df_train <- data %>% filter(row_number() <= split)
+  df_test <- data %>% filter(row_number() > split)
+  
+  desc <- df_train %>% 
+    dplyr::select(disengaged, looking, talking, technology, resources, external) %>% 
+    get_desc()
+  
+  x_train <- df_train %>%
+    dplyr::select(disengaged, looking, talking, technology, resources, external) %>%
+    normalization_minmax(desc) %>%
+    as.matrix()
+  x_test <- df_test %>%
+    dplyr::select(disengaged, looking, talking, technology, resources, external) %>%
+    normalization_minmax(desc) %>%
+    as.matrix()
+  
+  y_train <- df_train$HHMPredS
+  y_test <-df_test$HHMPredS
+  
+  model <- keras_model_sequential()
+  invisible(model <- model %>%
+              layer_dense(units = 3, activation = "tanh", input_shape = ncol(x_train),
+                          activity_regularizer=regularizer_l1(10e-5)) %>%
+              layer_dense(units = ncol(x_train)))
+  
+  print(summary(model))
+  
+  model <- model %>% compile(loss = "mean_squared_error", optimizer = "adam")
+  
+  checkpoint <- callback_model_checkpoint(
+    filepath = "model.hdf5", 
+    save_best_only = TRUE, 
+    period = 1,
+    verbose = 1
+  )
+  
+  early_stopping <- callback_early_stopping(patience = 5)
+  
+  model %>% fit(
+    x = x_train, 
+    y = x_train, 
+    epochs = 100,
+    verbose = 0,
+    batch_size = 32,
+    validation_data = list(x_test, x_test), 
+    callbacks = list(checkpoint, early_stopping)
+  )
+  
+  model
+}
+
+
+
 extract_hidden_layer <- function(data, model){
   desc <- data %>% 
     dplyr::select(disengaged, looking, talking, technology, resources, external) %>% 
@@ -126,12 +182,19 @@ extract_hidden_layer <- function(data, model){
 }
 
 
-insert_ae_units <- function(data, model){
+insert_ae_units <- function(data, model, sparse = FALSE){
   new_columns <- extract_hidden_layer(data, model)
   new_columns <- data.frame(new_columns)
   
-  for(i in 1:ncol(new_columns)){
-    names(new_columns)[i] <-  paste(c("AEdim", i), collapse = "")
+  if(sparse){
+    for(i in 1:ncol(new_columns)){
+      names(new_columns)[i] <-  paste(c("SpAEdim", i), collapse = "")
+    }
+  }
+  else{
+    for(i in 1:ncol(new_columns)){
+      names(new_columns)[i] <-  paste(c("AEdim", i), collapse = "")
+    }
   }
   
   data <- data.frame(data, new_columns)

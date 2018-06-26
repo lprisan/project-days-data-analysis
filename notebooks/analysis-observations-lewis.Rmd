@@ -336,11 +336,16 @@ predictions <- get_predictions(validation, model)
 summary(predictions$AEerr)
 ```
 
+We can build a sparse autoencoder using the function `build_sparse_autoencoder(data)` and proceeding in the same
+way as above otherwise
+
 Once we are satisfied with our model, we can add the units of the hidden layer to our dataframe, using the
-`insert_ae_units(data, model)` from the file.
+`insert_ae_units(data, model, sparse = FALSE)` from the file.
 ```{r}
 processed_data <- insert_ae_units(processed_data, model)
 ```
+If the model is a sparse autoencoder, the `sparse` variable shoulde be set `TRUE` in order to
+label the columns correctly.
 
 We can see that the new variables have a moderate correlation with the previously introduced MCA dimensions.
 This does not really come as a surprise, as both techniques are related to Principal Component Analysis (PCA).
@@ -388,7 +393,8 @@ agg_data <- merge_and_aggregate(matched_data, iq_data, fq_data)
 ```
 
 The dataset given to this function must contain exactly three MCA dimension variables and exactly three
-autoencoder unit variables.
+autoencoder unit variables. If there are three spare autoencoder variables, one should use
+`agg_data <- merge_and_aggregate(matched_data, iq_data, fq_data, sparseAE = TRUE)`.
 
 However, by visual inspection we can see that there is no particularly high correleation between any of the
 observer variables and the student response variables:
@@ -421,3 +427,4 @@ test_discrete_vars_for_observers(processed_data, c("disengaged","looking","talki
 df <- normalise(processed_data, c("MCAdim1","MCAdim2","MCAdim3","AEdim1","AEdim2","AEdim3"))
 test_cont_vars_for_observers(df, c("MCAdim1","MCAdim2","MCAdim3","AEdim1","AEdim2","AEdim3"))
 ```
+
