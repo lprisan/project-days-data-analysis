@@ -384,7 +384,7 @@ Once we have matched the data with the questionnaires, we can merge and aggregat
 file in the following way:
 
 ```{r}
-agg_data <- merge_and_aggregate(processed_data, iq_data, fq_data)
+agg_data <- merge_and_aggregate(matched_data, iq_data, fq_data)
 ```
 
 The dataset given to this function must contain exactly three MCA dimension variables and exactly three

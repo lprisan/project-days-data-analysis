@@ -233,28 +233,21 @@ merge_and_aggregate <- function(data, iq, fq){
   #### The dataset given to this function must contain exactly three MCA dimension variables and exactly
   #### three AE unit variables
   
-  # if(is.na(data)){
-  #   data <- match_with_data(data, iq, fq)
-  # }
-  
-  ## Removes all entries without matching intermediate questionnaire
-  data <- dplyr::group_by(data, data$int.questionnaire)
   data <- dplyr::filter(data, !is.na(data$int.questionnaire))
-  data <- dplyr::ungroup(data())
   
   ## Aggregates data by intermediate and final questionnaires
   data <- data %>%
-    dplyr::group_by(data$int.questionnaire, data$fin.questionnaire) %>%
+    dplyr::group_by(int.questionnaire, fin.questionnaire) %>%
     dplyr::summarize(global.id = first_element(global.id),
-      disengaged = mean(data$disengaged, na.rm = TRUE), looking = mean(data$looking, na.rm = TRUE),
-              talking = mean(data$talking, na.rm = TRUE), technology = mean(data$technology, na.rm = TRUE),
-              resources = mean(data$resources, na.rm = TRUE),
-              external = mean(data$external, na.rm = TRUE), activity = first_element(data$activity),
-              observer = first_element(data$observer), project = first_element(data$project),
-              date = first_element(data$date), comments = first_element(data$comments),
-              MCAdim1 = mean(data$MCAdim1, na.rm = TRUE), MCAdim2 = mean(data$MCAdim2, na.rm = TRUE),
-              MCAdim3 = mean(data$MCAdim3, na.rm = TRUE), AEdim1 = mean(data$AEdim1, na.rm = TRUE),
-              AEdim2 = mean(data$AEdim2, na.rm = TRUE), AEdim3 = mean(data$AEdim3, na.rm = TRUE))
+      disengaged = mean(disengaged, na.rm = TRUE), looking = mean(looking, na.rm = TRUE),
+              talking = mean(talking, na.rm = TRUE), technology = mean(technology, na.rm = TRUE),
+              resources = mean(resources, na.rm = TRUE),
+              external = mean(external, na.rm = TRUE), activity = first_element(activity),
+              observer = first_element(observer), project = first_element(project),
+              date = first_element(date), comments = first_element(comments),
+              MCAdim1 = mean(MCAdim1, na.rm = TRUE), MCAdim2 = mean(MCAdim2, na.rm = TRUE),
+              MCAdim3 = mean(MCAdim3, na.rm = TRUE), AEdim1 = mean(AEdim1, na.rm = TRUE),
+              AEdim2 = mean(AEdim2, na.rm = TRUE), AEdim3 = mean(AEdim3, na.rm = TRUE), n = n())
   
   data$contribution <- NA
   data$difficulty <- NA
