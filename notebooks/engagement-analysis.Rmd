@@ -12,7 +12,7 @@ library(knitr)
 library(dplyr)
 library(magrittr)
 library("PerformanceAnalytics")
-
+library(Hmisc)
 
 source("../src/processObservationData.R")
 source("../src/mca.R")
@@ -143,7 +143,7 @@ obsdata %>% mutate(global.group.id=paste(date,group)) %>%
 
 If we now compare these MCA dimensions of engagement with the responses to the final questionnaire (difficulty --actually, ease; and satisfaction):
 
-```{r}
+```{r, eval=F}
 
 obtotal <- obsdata %>% dplyr::select(global.id, disengaged:external, MCA.Active.Eng:MCA.Conf.Help) %>% aggregate(.~global.id,data=., mean)
 
@@ -154,4 +154,35 @@ merged %>% dplyr::select(-global.id) %>% chart.Correlation(histogram=TRUE, pch=1
 
 The only interesting correlations are ease-confusion.help (confirms a bit the interpretation) and ease-looking (if it is easy, they don't look, just act?)
 
-Do these dimensions (or the autoencoder) take away some of the observer noise (IRR)?
+Do these dimensions (or the autoencoder) take away some of the observer noise (in IRR)? Apparently not
+
+## Adding the HMM and auto-encoder variables
+
+```{r}
+#create_hmm_states_global(obsdata, visualise = TRUE, max_states = 6)
+obsdata <- insert_hmm(obsdata)
+
+training_and_test <- obsdata %>% filter(row_number() <= nrow(obsdata)*0.75)
+validation <- obsdata %>% filter(row_number() > nrow(obsdata)*0.75)
+
+model <- build_autoencoder(training_and_test)
+
+predictions <- get_predictions(validation, model)
+
+summary(predictions$AEerr)
+obsdata <- insert_ae_units(obsdata, model)
+
+```
+
+## Comparing with activity-level questionnaires
+
+```{r}
+# See https://rstudio-pubs-static.s3.amazonaws.com/240657_5157ff98e8204c358b2118fa69162e18.html for multiple correlations tests
+
+
+matched_data <- match_with_data(obsdata, iq=actdata, fq=findata)
+agg_data <- merge_and_aggregate(matched_data, actdata, findata)
+
+agg_data %>% dplyr::select(disengaged:external, MCAdim1:AEdim3, contribution:collaboration,f_satisfaction,ease) %>% as.matrix() %>% rcorr(type = c("pearson","spearman")) %>% kable()
+
+```

@@ -109,8 +109,8 @@ create_hmm_states_global <- function(data, max_states = 3, sorted = F, visualise
                  multinomial(),multinomial(),multinomial())
   responses <- c(disengaged ~ 1,looking ~ 1,talking ~ 1,technology ~ 1,resources ~ 1,external ~ 1)
   
-  HMM <- depmix(response = responses, data = hmm_data, nstates=1, family = family, ntimes = indicator)
-  HMMfit <- fit(HMM, verbose = FALSE, emc=em.control(random.start = FALSE))
+  HMM <- depmixS4::depmix(response = responses, data = hmm_data, nstates=1, family = family, ntimes = indicator)
+  HMMfit <- depmixS4::fit(HMM, verbose = FALSE, emc=em.control(random.start = FALSE))
   
   loglik1 <- as.data.frame(logLik(HMMfit, method=c("fb","lystig","classification"),na.allow=TRUE))[1,1]
   
@@ -118,8 +118,8 @@ create_hmm_states_global <- function(data, max_states = 3, sorted = F, visualise
   names(measures) <- c("nstates", "logLik", "AIC", "BIC")
   
   for(i in 2:max_states){
-    HMM2 <- depmix(response = responses, data = data, nstates=i, family = family, ntimes = indicator)
-    HMMfit2 <- fit(HMM2, verbose = FALSE, emc=em.control(random.start = TRUE))
+    HMM2 <- depmixS4::depmix(response = responses, data = data, nstates=i, family = family, ntimes = indicator)
+    HMMfit2 <- depmixS4::fit(HMM2, verbose = FALSE, emc=em.control(random.start = TRUE))
     
     loglik2 <- as.data.frame(logLik(HMMfit2, method=c("fb","lystig","classification"),na.allow=TRUE))[1,1]
     
