@@ -106,7 +106,10 @@ get_predictions <- function(data, model){
 }
 
 
-build_sparse_autoencoder <- function(data){
+### Adapted the above using
+### https://blog.keras.io/building-autoencoders-in-keras.html
+
+build_sparse_autoencoder <- function(data, units = 3){
   split <- round(nrow(data)/2)
   
   df_train <- data %>% filter(row_number() <= split)
@@ -130,7 +133,7 @@ build_sparse_autoencoder <- function(data){
   
   model <- keras_model_sequential()
   invisible(model <- model %>%
-              layer_dense(units = 3, activation = "tanh", input_shape = ncol(x_train),
+              layer_dense(units = units, activation = "tanh", input_shape = ncol(x_train),
                           activity_regularizer=regularizer_l1(10e-5)) %>%
               layer_dense(units = ncol(x_train)))
   
@@ -151,6 +154,66 @@ build_sparse_autoencoder <- function(data){
     x = x_train, 
     y = x_train, 
     epochs = 100,
+    verbose = 0,
+    batch_size = 32,
+    validation_data = list(x_test, x_test), 
+    callbacks = list(checkpoint, early_stopping)
+  )
+  
+  model
+}
+
+
+### Adapted above using
+### https://cran.rstudio.com/web/packages/keras/vignettes/sequential_model.html
+### Currently doesn't work!!!!
+
+build_recurrent_autoencoder <- function(data){
+  split <- round(nrow(data)/2)
+  
+  df_train <- data %>% filter(row_number() <= split)
+  df_test <- data %>% filter(row_number() > split)
+  
+  desc <- df_train %>% 
+    dplyr::select(disengaged, looking, talking, technology, resources, external) %>% 
+    get_desc()
+  
+  x_train <- df_train %>%
+    dplyr::select(disengaged, looking, talking, technology, resources, external) %>%
+    normalization_minmax(desc) %>%
+    as.matrix()
+  x_test <- df_test %>%
+    dplyr::select(disengaged, looking, talking, technology, resources, external) %>%
+    normalization_minmax(desc) %>%
+    as.matrix()
+  
+  y_train <- df_train$HHMPredS
+  y_test <-df_test$HHMPredS
+  
+  
+  model <- keras_model_sequential()
+  invisible(model <- model %>%
+              layer_embedding(input_dim = 6, output_dim = 1) %>%
+              layer_lstm(units = 3, activation = "tanh", input_shape = ncol(x_train)) %>%
+              layer_dropout(rate = 0.5) %>%
+              layer_dense(units = ncol(x_train))
+  )
+  
+  model <- model %>% compile(loss = "mean_squared_error", optimizer = "adam")
+  
+  checkpoint <- callback_model_checkpoint(
+    filepath = "model.hdf5", 
+    save_best_only = TRUE, 
+    period = 1,
+    verbose = 1
+  )
+  
+  early_stopping <- callback_early_stopping(patience = 5)
+  
+  model %>% fit(
+    x = x_train, 
+    y = x_train, 
+    epochs = 200,
     verbose = 0,
     batch_size = 32,
     validation_data = list(x_test, x_test), 
@@ -182,19 +245,13 @@ extract_hidden_layer <- function(data, model){
 }
 
 
-insert_ae_units <- function(data, model, sparse = FALSE){
+insert_ae_units <- function(data, model, name = ""){
   new_columns <- extract_hidden_layer(data, model)
   new_columns <- data.frame(new_columns)
   
-  if(sparse){
-    for(i in 1:ncol(new_columns)){
-      names(new_columns)[i] <-  paste(c("SpAEdim", i), collapse = "")
-    }
-  }
-  else{
-    for(i in 1:ncol(new_columns)){
-      names(new_columns)[i] <-  paste(c("AEdim", i), collapse = "")
-    }
+  
+  for(i in 1:ncol(new_columns)){
+    names(new_columns)[i] <-  paste(c(name, "AEdim", i), collapse = "")
   }
   
   data <- data.frame(data, new_columns)
@@ -216,4 +273,32 @@ get_desc <- function(x) {
 
 normalization_minmax <- function(x, desc) {
   map2_dfc(x, desc, ~(.x - .y$min)/(.y$max - .y$min))
+}
+
+create_uniform_timeseries <- function(data){
+  students <- unique(data$global.id)
+  max_length <- 0
+  
+  for(i in 1:length(students)){
+    this_length <- nrow(dplyr::filter(data, global.id == students[[i]]))
+    
+    if(this_length > max_length){max_length <- this_length}
+  }
+  
+  new_data_frame <- dplyr::filter(data, disengaged == -1)
+  
+  for(i in 1:length(students)){
+    filtered_data <- dplyr::filter(data, global.id == students[[i]])
+    
+    if(nrow(filtered_data) < max_length){
+      n <- max_length - nrow(filtered_data)
+      for(j in 1:n){
+        filtered_data <- rbind(filtered_data, filtered_data[nrow(filtered_data), ])
+      }
+    }
+    
+    new_data_frame <- rbind(new_data_frame, filtered_data)
+  }
+  
+  new_data_frame
 }

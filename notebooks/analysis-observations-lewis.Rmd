@@ -336,16 +336,16 @@ predictions <- get_predictions(validation, model)
 summary(predictions$AEerr)
 ```
 
-We can build a sparse autoencoder using the function `build_sparse_autoencoder(data)` and proceeding in the same
-way as above otherwise
+We can build a sparse autoencoder using the function `build_sparse_autoencoder(data, units = 3)`
+and proceeding in the same way as above otherwise.
 
 Once we are satisfied with our model, we can add the units of the hidden layer to our dataframe, using the
 `insert_ae_units(data, model, sparse = FALSE)` from the file.
 ```{r}
 processed_data <- insert_ae_units(processed_data, model)
 ```
-If the model is a sparse autoencoder, the `sparse` variable shoulde be set `TRUE` in order to
-label the columns correctly.
+If the model is a different type of autoencoder (e.g. sparse), the `name` variable shoulde be set to a prefix that
+labels the columns correctly.
 
 We can see that the new variables have a moderate correlation with the previously introduced MCA dimensions.
 This does not really come as a surprise, as both techniques are related to Principal Component Analysis (PCA).
@@ -357,6 +357,32 @@ Even though we already have a quite good idea of what the MCA dimensions represe
 of the highest and lowest scoring comments of the auto encoder output variables does not suggest
 any trend in general and does not make a correlation with the MCA dimension visible in particular.
 
+A slightly better fit is given by a sparse autoencoder with three units. Here, the interpretation is easier
+and the correlation with the MCA dimensions are stronger.
+
+```{r, include = F}
+model <- build_sparse_autoencoder(processed_data)
+processed_data <- insert_ae_units(processed_data, model, name = "Sp")
+```
+```{r, eval = F}
+model <- build_sparse_autoencoder(processed_data)
+processed_data <- insert_ae_units(processed_data, model, name = "Sp")
+```
+
+Visual inspection of comments and observer values shows that low values in the first sparse AE dimension
+correspond to active engagement in the task with a focus on group work, while high values represent
+disengaged students, who are possibly even engaging in external matters. High values in the second dimension
+seem to conicide with students who talking with others, opposed to low values which represent student who
+are focusing completely on the use of technology and other resources.
+The interpretation of the final variable proves to be a bit more difficult. On the two extreme ends,
+there are students who are disengaged and looking, and students who are everything else.
+This suggests that the third variable only gives us information that is already contained in the first
+two variables. However, a sparse autoencoder does not seem to a fruitful model of the data. There
+is a high negative correlation with the second MCA dimension:
+
+```{r}
+cor(processed_data[, c("SpAEdim1","SpAEdim2","SpAEdim3","MCAdim1","MCAdim2","MCAdim3")], method = "kendall")
+```
 
 ## Loading Questionnaires
 
@@ -394,7 +420,7 @@ agg_data <- merge_and_aggregate(matched_data, iq_data, fq_data)
 
 The dataset given to this function must contain exactly three MCA dimension variables and exactly three
 autoencoder unit variables. If there are three spare autoencoder variables, one should use
-`agg_data <- merge_and_aggregate(matched_data, iq_data, fq_data, sparseAE = TRUE)`.
+`agg_data <- merge_and_aggregate(matched_data, iq_data, fq_data, sparse = FALSE)`.
 
 However, by visual inspection we can see that there is no particularly high correleation between any of the
 observer variables and the student response variables:
