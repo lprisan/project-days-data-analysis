@@ -454,3 +454,39 @@ df <- normalise(processed_data, c("MCAdim1","MCAdim2","MCAdim3","AEdim1","AEdim2
 test_cont_vars_for_observers(df, c("MCAdim1","MCAdim2","MCAdim3","AEdim1","AEdim2","AEdim3"))
 ```
 
+
+
+##Process Mining
+In order to analyse common tranistion states, it is possible to perform some (visual) process mining on our data
+using the file `project_mining.R`. Firstly, the function 
+```{r, include=F}
+source("../src/project_mining.R")
+```
+```{r, eval = F}
+preprocess_for_mining(data, obs.var =
+                      c("disengaged", "looking", "talking", "technology", "resources", "external"))
+```
+takes in a data frame and preprocesses it for the process mining. One has to select the observer variables one wants
+to analyse. Especially if this is done visually it is wise to restrict to 3 or 4 variables at most.
+A data frame that is ready to be used for the project mining is returned.
+
+The function, `plot_variants(data)` takes in a preprocessed data frame and plots the distribution of variants.
+```{r}
+pm_data <- preprocess_for_mining(processed_data)
+plot_variants(pm_data)
+```
+According to kdnuggets.com, the bars of this plot ideally tail off. As they do not in our case,
+this model might not give as a lot of information.
+
+Finally, the function `visualise_process_maps(data, plot = FALSE)` gives us an tranistion idea of the frequency of
+transitions between states and an optional plot of these. An example plotting the variables looking, talking and
+technology is given here:
+```{r}
+pm_data <- preprocess_for_mining(processed_data, c("looking", "talking", "technology"))
+transitions <- visualise_process_maps(pm_data, plot = T)
+```
+We can see that the two most common states are technology and talking & technology. The most common tranitions
+are the ones going from these states to themselves, while tranisioning between using technology and
+not looking, not talking and not using technology is also quite common (the intensity of the red indicates
+the frequency).
+
