@@ -10,10 +10,10 @@ library(Metrics)
 
 #Mainly based on https://www.r-bloggers.com/deep-learning-in-r-2/
 
-
+### Builds a auto encoder given a preprocessed data (from processObservationData.R) and a number of desired units
 build_autoencoder <- function(data){
   split <- round(nrow(data)/2)
-  
+
   df_train <- data %>% filter(row_number() <= split)
   df_test <- data %>% filter(row_number() > split)
   
@@ -29,7 +29,7 @@ build_autoencoder <- function(data){
      dplyr::select(disengaged, looking, talking, technology, resources, external) %>%
      normalization_minmax(desc) %>%
      as.matrix()
-  
+
   y_train <- df_train$HHMPredS
   y_test <-df_test$HHMPredS
   
@@ -61,35 +61,11 @@ build_autoencoder <- function(data){
     callbacks = list(checkpoint, early_stopping)
   )
   
-  # FLAGS <- flags(
-  #   flag_string("normalization", "minmax", "One of minmax, zscore"),
-  #   flag_string("activation", "relu", "One of relu, selu, tanh, sigmoid"),
-  #   flag_numeric("learning_rate", 0.001, "Optimizer Learning Rate"),
-  #   flag_integer("hidden_size", 3, "The hidden layer size")
-  # )
-  # 
-  # model %>% compile(
-  #   optimizer = optimizer_adam(lr = FLAGS$learning_rate), 
-  #   loss = "mean_squared_error"
-  # )
-  # 
-  # 
-  
-  #model <- load_model_hdf5("runs/cloudml_2018_01_23_221244595-03/model.hdf5", compile = FALSE)
-  
-  # pred_train <- predict(model, x_train)
-  # mse_train <- apply((x_train - pred_train)^2, 1, sum)
-  # 
-  # pred_test <- predict(model, x_test)
-  # mse_test <- apply((x_test - pred_test)^2, 1, sum)
-  # 
-  # print(auc(y_train, mse_train))
-  # print(auc(y_test, mse_test))
-  
   model
 }
 
 
+### Extracts predictions 
 get_predictions <- function(data, model){
   eval_data <- as.matrix(data[,c("disengaged", "looking", "talking", "technology", "resources", "external")])
   
@@ -108,10 +84,11 @@ get_predictions <- function(data, model){
 
 ### Adapted the above using
 ### https://blog.keras.io/building-autoencoders-in-keras.html
+### Builds a sparse auto encoder given a preprocessed data (from processObservationData.R) and a number of units
 
 build_sparse_autoencoder <- function(data, units = 3){
   split <- round(nrow(data)/2)
-  
+
   df_train <- data %>% filter(row_number() <= split)
   df_test <- data %>% filter(row_number() > split)
   
@@ -127,7 +104,7 @@ build_sparse_autoencoder <- function(data, units = 3){
     dplyr::select(disengaged, looking, talking, technology, resources, external) %>%
     normalization_minmax(desc) %>%
     as.matrix()
-  
+
   y_train <- df_train$HHMPredS
   y_test <-df_test$HHMPredS
   
@@ -165,41 +142,24 @@ build_sparse_autoencoder <- function(data, units = 3){
 
 
 ### Adapted above using
-### https://cran.rstudio.com/web/packages/keras/vignettes/sequential_model.html
+### https://cran.rstudio.com/web/packages/keras/vignettes/sequential_model.html and
+### https://datascience.stackexchange.com/questions/26366/training-an-rnn-with-examples-of-different-lengths-in-keras
 ### Currently doesn't work!!!!
 
 build_recurrent_autoencoder <- function(data){
-  split <- round(nrow(data)/2)
-  
-  df_train <- data %>% filter(row_number() <= split)
-  df_test <- data %>% filter(row_number() > split)
-  
-  desc <- df_train %>% 
-    dplyr::select(disengaged, looking, talking, technology, resources, external) %>% 
-    get_desc()
-  
-  x_train <- df_train %>%
-    dplyr::select(disengaged, looking, talking, technology, resources, external) %>%
-    normalization_minmax(desc) %>%
-    as.matrix()
-  x_test <- df_test %>%
-    dplyr::select(disengaged, looking, talking, technology, resources, external) %>%
-    normalization_minmax(desc) %>%
-    as.matrix()
-  
-  y_train <- df_train$HHMPredS
-  y_test <-df_test$HHMPredS
   
   
   model <- keras_model_sequential()
   invisible(model <- model %>%
-              layer_embedding(input_dim = 6, output_dim = 1) %>%
-              layer_lstm(units = 3, activation = "tanh", input_shape = ncol(x_train)) %>%
-              layer_dropout(rate = 0.5) %>%
-              layer_dense(units = ncol(x_train))
-  )
+              layer_lstm(units = 3, return_sequences = TRUE, input_shape = c(NULL, 6)) %>%
+              layer_lstm(3, return_sequences = TRUE) %>%
+              #layer_dropout(rate = 0.5) %>%
+              time_distributed(layer_dense(2, activation = "sigmoid"))
+            )
+                               
   
-  model <- model %>% compile(loss = "mean_squared_error", optimizer = "adam")
+  
+  model <- model %>% compile(loss = "categorical_crossentropy", optimizer = "adam")
   
   checkpoint <- callback_model_checkpoint(
     filepath = "model.hdf5", 
@@ -210,15 +170,22 @@ build_recurrent_autoencoder <- function(data){
   
   early_stopping <- callback_early_stopping(patience = 5)
   
-  model %>% fit(
-    x = x_train, 
-    y = x_train, 
-    epochs = 200,
-    verbose = 0,
-    batch_size = 32,
-    validation_data = list(x_test, x_test), 
-    callbacks = list(checkpoint, early_stopping)
-  )
+  students <- unique(data$global.id)
+  
+  for(i in 1:length(students)){
+    batch <- data %>% dplyr::filter(global.id == students[[i]]) %>%
+                      dplyr::select(disengaged, looking, talking, technology, resources, external)
+    
+    batch %<>% normalization_minmax(get_desc(batch)) %>% as.matrix()
+    
+    model %>% fit(
+      batch, 
+      epochs = 50,
+      verbose = 0,
+      batch_size = nrow(batch),
+      callbacks = list(checkpoint, early_stopping)
+    )
+  }
   
   model
 }

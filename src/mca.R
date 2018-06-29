@@ -9,6 +9,7 @@ library(dplyr)
 # http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/
 
 
+### creates a mca model for a given dataset, optionally with explanatory plots
 mca_analysis <- function(data, plots = T){
   mca_data <- data[,c("disengaged","looking","talking","technology","resources","external")]
   
@@ -44,6 +45,8 @@ mca_analysis <- function(data, plots = T){
   mca1
 }
 
+
+### inserts an mca model (dimension columns) into dataframe. model can be created manually before for inspection
 add_mca_dimensions <- function(dataframe, mca = NULL, dimensions = 3){
   
   #MCA can be passed manually if one wants to inspect the MCA output first. Otherwise created here.

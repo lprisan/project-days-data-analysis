@@ -5,6 +5,8 @@ library(magrittr)
 library(dplyr)
 library(stringr)
 
+
+### brings dataset from one give gsheet into a clean format
 processObservationData <- function(data,
                                    date = as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
                                    activitycol=F,
@@ -94,6 +96,8 @@ processObservationData <- function(data,
  student_obs
 }
 
+
+### brings several gsheets into clean format and returns one dataframe
 processAllObservationData <- function(fileURLs = c("https://docs.google.com/spreadsheets/d/11BPHcSlqwozx3ffOQhQ5i5O8TRVa8xKoaw2uiny8k5A/edit",
                                                      "https://docs.google.com/spreadsheets/d/1kqSu52ZJo0y3cnhAe9fEsv9t7kUdRQ-2cKqSsziQk_M/edit",
                                                      "https://docs.google.com/spreadsheets/d/13Od5UuY5LLh2E5EPVD17IP6dO3x_xTpxyVYg9BQmIdE/edit",

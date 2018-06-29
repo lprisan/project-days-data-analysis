@@ -10,7 +10,7 @@ library(tidyverse)
 
 #Based on processObservationData.R
 
-
+### loads one intermediate questionnaire
 load_intermediate_questionnaire <- function(url, date_type){
   raw_data <- as.data.frame(gsheet2tbl(url), check.names = FALSE, fileEncoding="UTF-8")
   
@@ -79,7 +79,7 @@ load_intermediate_questionnaire <- function(url, date_type){
   raw_data
 }
 
-
+### loads all intermediate questionnaires
 load_all_intermediate_questionnaires <- function(
   urls = c("https://docs.google.com/spreadsheets/d/1TnEb1MEy1PQeYvtFMbEm5s33xqQCX7IpM05hoBELg10/edit#gid=710315571",
           "https://docs.google.com/spreadsheets/d/1NbsjX7vQqgfCKmTJQ-9Zs3zj2dU0CrnMBavXy9qZfqc/edit#gid=76827960",
@@ -112,7 +112,7 @@ load_all_intermediate_questionnaires <- function(
   complete_dataset
 }
 
-
+### loads one final questionnaire
 load_final_questionnaire <- function(url, date_type){
   raw_data <- as.data.frame(gsheet2tbl(url), check.names = FALSE, fileEncoding="UTF-8-BOM")
   
@@ -148,6 +148,7 @@ load_final_questionnaire <- function(url, date_type){
   raw_data
 }
 
+### loads all final questionnaires
 load_all_final_questionnaires <- function(
   urls = c("https://docs.google.com/spreadsheets/d/1v2E-FQMl4t2qJAAc3Vg8Qo6-7-W_Ajq5ja89QBPk4Fs/edit#gid=1280693886",
             "https://docs.google.com/spreadsheets/d/1JjXYqMGQmTKbAW9q_u7Rl9LWgglIOiVGVKU6iBTijl0/edit#gid=1575889659",
@@ -184,7 +185,8 @@ load_all_final_questionnaires <- function(
 
 
 
-
+### takes in an observation data set, an intermediate and a final questionnaire (processed by the above functions).
+### returns a observation set in which the entries are matched with the questionnaires via the id columns
 match_with_data <- function(data, iq, fq){
    students <- unique(fq$global.id)
    data$int.questionnaire <- NA

@@ -11,16 +11,19 @@ library(pracma)
 ### Based on https://www.kdnuggets.com/2017/11/process-mining-r-introduction.html
 
 
-
-
+### preprocesses data. given a dataframe it returns a dataframe that can be used by the following functions.
+### one has to select the columns that should be analysed as the obs.var input
 preprocess_for_mining <- function(data, obs.var =
                                     c("disengaged", "looking", "talking", "technology", "resources", "external")){
   
   data <- data[, c("timestamp", "global.id", obs.var)]
   
   data$label <- data[, 3]
-  for(i in 4:(length(obs.var) + 2)){
-    data$label <- paste(data$label, data[, i], sep = " - ")
+  
+  if(length(obs.var) > 1){
+    for(i in 4:(length(obs.var) + 2)){
+      data$label <- paste(data$label, data[, i], sep = " - ")
+    }
   }
   
   data$timestamp <- as.POSIXct(strptime(data$timestamp, format = "%d/%m/%Y %H:%M:%S"))
@@ -78,6 +81,8 @@ plot_variants <- function(data){
 }
 
 
+### creates a process mining model and returns an analysis as well as an optional plot.
+### takes in a preprocessed dataframe
 visualise_process_maps <- function(data, plot = FALSE){
   data$count <- 1
   

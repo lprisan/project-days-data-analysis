@@ -466,6 +466,7 @@ source("../src/project_mining.R")
 preprocess_for_mining(data, obs.var =
                       c("disengaged", "looking", "talking", "technology", "resources", "external"))
 ```
+
 takes in a data frame and preprocesses it for the process mining. One has to select the observer variables one wants
 to analyse. Especially if this is done visually it is wise to restrict to 3 or 4 variables at most.
 A data frame that is ready to be used for the project mining is returned.
@@ -475,6 +476,7 @@ The function, `plot_variants(data)` takes in a preprocessed data frame and plots
 pm_data <- preprocess_for_mining(processed_data)
 plot_variants(pm_data)
 ```
+
 According to kdnuggets.com, the bars of this plot ideally tail off. As they do not in our case,
 this model might not give as a lot of information.
 
@@ -485,8 +487,18 @@ technology is given here:
 pm_data <- preprocess_for_mining(processed_data, c("looking", "talking", "technology"))
 transitions <- visualise_process_maps(pm_data, plot = T)
 ```
+
 We can see that the two most common states are technology and talking & technology. The most common tranitions
 are the ones going from these states to themselves, while tranisioning between using technology and
 not looking, not talking and not using technology is also quite common (the intensity of the red indicates
 the frequency).
+
+Similarly, we can use this to visualise the transitions between the HMM states:
+```{r}
+pm_data <- preprocess_for_mining(processed_data, c("HMMPredS"))
+transitions <- visualise_process_maps(pm_data, plot = T)
+```
+
+This confirms what we we have analysed before: The third state is by far the most common and transitions between
+distinct states are rather rare.
 

@@ -8,6 +8,7 @@ library(stringr)
 #Mainly based on https://cran.r-project.org/web/packages/depmixS4/vignettes/depmixS4.pdf
 
 
+### creates an HMM model for an individual student
 create_hmm_states_student <- function(data, globalid, max_states = 3){
   #Selects data of the student passed on to the function
   student_data <- subset(new_data, global.id == globalid)
@@ -67,6 +68,8 @@ create_hmm_states_student <- function(data, globalid, max_states = 3){
   HMMfit
 }
 
+
+#removes students with only one entry
 remove_unique_students <- function(data){
   globalids <- unique(data$global.id)
   
@@ -78,6 +81,7 @@ remove_unique_students <- function(data){
 }
 
 
+### creates an HMM model for a whole dataset
 create_hmm_states_global <- function(data, max_states = 3, sorted = F, visualise = T){
   previous_id <- " "
   counter <- 0
@@ -205,7 +209,7 @@ insert_hmm <- function(data, initial_state = 1){
   data
 }
 
-
+### plots the state transition for a selected student
 plot_development_by_student <- function(data, globalid){
   student_data <- subset(data, global.id == globalid)
   
@@ -221,6 +225,7 @@ plot_development_by_student <- function(data, globalid){
   print(p)
 }
 
+### analyses how frequently a student changes states
 state_analysis <- function(dataframe){
   students <- unique(dataframe$global.id)
   state_changes <- 0
@@ -228,7 +233,6 @@ state_analysis <- function(dataframe){
   
 
   for(student in students){
-    #Problem here. The filter function doesn't work as desired and only returns empty data frames
     student_data <- dataframe %>% dplyr::filter(str_detect(global.id, as.character(student)))
     #student_data <- dplyr::filter(dataframe, !grepl(student, as.character(global.id)))
     student_data <- student_data$HMMPredS
