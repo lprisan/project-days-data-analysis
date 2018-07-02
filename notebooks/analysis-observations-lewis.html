@@ -123,7 +123,7 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">Processing Observation Data from Learning Experiments</h1>
 <h4 class="author"><em>Lewis Marsh and Luis P. Prieto</em></h4>
-<h4 class="date"><em>29 June, 2018</em></h4>
+<h4 class="date"><em>02 July, 2018</em></h4>
 
 </div>
 
@@ -614,53 +614,67 @@ model &lt;- build_autoencoder(training_and_test)</code></pre>
 ## Non-trainable params: 0
 ## ___________________________________________________________________________
 ## NULL</code></pre>
-<pre class="r"><code>predictions &lt;- get_predictions(validation, model)
+<pre class="r"><code>validation &lt;- get_predictions(validation, model)
 
-summary(predictions$AEerr)</code></pre>
-<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-##  0.0000  0.0000  0.0000  0.4561  1.0000  3.0000</code></pre>
+summary(validation$AEerr)</code></pre>
+<pre><code>## Length  Class   Mode 
+##      0   NULL   NULL</code></pre>
 <p>We can build a sparse autoencoder using the function <code>build_sparse_autoencoder(data, units = 3)</code> and proceeding in the same way as above otherwise.</p>
 <p>Once we are satisfied with our model, we can add the units of the hidden layer to our dataframe, using the <code>insert_ae_units(data, model, sparse = FALSE)</code> from the file.</p>
 <pre class="r"><code>processed_data &lt;- insert_ae_units(processed_data, model)</code></pre>
 <p>If the model is a different type of autoencoder (e.g. sparse), the <code>name</code> variable shoulde be set to a prefix that labels the columns correctly.</p>
 <p>We can see that the new variables have a moderate correlation with the previously introduced MCA dimensions. This does not really come as a surprise, as both techniques are related to Principal Component Analysis (PCA).</p>
 <pre class="r"><code>cor(processed_data[,c(&quot;MCAdim1&quot;,&quot;MCAdim2&quot;,&quot;MCAdim3&quot;,&quot;HMMPredS&quot;,&quot;AEdim1&quot;,&quot;AEdim2&quot;,&quot;AEdim3&quot;)], use=&quot;complete.obs&quot;, method=&quot;kendall&quot;)</code></pre>
-<pre><code>##              MCAdim1     MCAdim2     MCAdim3   HMMPredS      AEdim1
-## MCAdim1   1.00000000  0.02282555  0.05704291 -0.2437179 -0.69623197
-## MCAdim2   0.02282555  1.00000000 -0.01752765 -0.3305776 -0.22039490
-## MCAdim3   0.05704291 -0.01752765  1.00000000 -0.1588616 -0.22802408
-## HMMPredS -0.24371794 -0.33057757 -0.15886164  1.0000000  0.34242294
-## AEdim1   -0.69623197 -0.22039490 -0.22802408  0.3424229  1.00000000
-## AEdim2    0.25417684 -0.43172763 -0.38705075  0.1673427 -0.02916606
-## AEdim3   -0.03128227 -0.30887876 -0.12273403  0.3415999  0.08224324
-##               AEdim2      AEdim3
-## MCAdim1   0.25417684 -0.03128227
-## MCAdim2  -0.43172763 -0.30887876
-## MCAdim3  -0.38705075 -0.12273403
-## HMMPredS  0.16734268  0.34159993
-## AEdim1   -0.02916606  0.08224324
-## AEdim2    1.00000000  0.28123916
-## AEdim3    0.28123916  1.00000000</code></pre>
+<pre><code>##              MCAdim1     MCAdim2     MCAdim3     HMMPredS      AEdim1
+## MCAdim1   1.00000000  0.02282555  0.05704291 -0.243717940 -0.55739127
+## MCAdim2   0.02282555  1.00000000 -0.01752765 -0.330577574  0.24170819
+## MCAdim3   0.05704291 -0.01752765  1.00000000 -0.158861642  0.05530952
+## HMMPredS -0.24371794 -0.33057757 -0.15886164  1.000000000  0.09236345
+## AEdim1   -0.55739127  0.24170819  0.05530952  0.092363451  1.00000000
+## AEdim2   -0.40627546  0.14427698 -0.01677303 -0.008899793  0.07895832
+## AEdim3   -0.32885394 -0.55011818 -0.25757684  0.503008073  0.05771823
+##                AEdim2      AEdim3
+## MCAdim1  -0.406275465 -0.32885394
+## MCAdim2   0.144276983 -0.55011818
+## MCAdim3  -0.016773033 -0.25757684
+## HMMPredS -0.008899793  0.50300807
+## AEdim1    0.078958316  0.05771823
+## AEdim2    1.000000000  0.03636598
+## AEdim3    0.036365980  1.00000000</code></pre>
 <p>Even though we already have a quite good idea of what the MCA dimensions represent, a visual inspection (not pictured) of the highest and lowest scoring comments of the auto encoder output variables does not suggest any trend in general and does not make a correlation with the MCA dimension visible in particular.</p>
 <p>A slightly better fit is given by a sparse autoencoder with three units. Here, the interpretation is easier and the correlation with the MCA dimensions are stronger.</p>
-<pre class="r"><code>model &lt;- build_sparse_autoencoder(processed_data)
-processed_data &lt;- insert_ae_units(processed_data, model, name = &quot;Sp&quot;)</code></pre>
+<pre class="r"><code>model_sparse &lt;- build_sparse_autoencoder(training_and_test)
+processed_data &lt;- insert_ae_units(processed_data, model_sparse, name = &quot;Sp&quot;)
+
+validation &lt;- get_predictions(validation, model_sparse, type = &quot;Sp&quot;)</code></pre>
+<pre class="r"><code>mean(validation$SpAEError)</code></pre>
+<pre><code>## [1] 0.5348133</code></pre>
 <p>Visual inspection of comments and observer values shows that low values in the first sparse AE dimension correspond to active engagement in the task with a focus on group work, while high values represent disengaged students, who are possibly even engaging in external matters. High values in the second dimension seem to conicide with students who talking with others, opposed to low values which represent student who are focusing completely on the use of technology and other resources. The interpretation of the final variable proves to be a bit more difficult. On the two extreme ends, there are students who are disengaged and looking, and students who are everything else. This suggests that the third variable only gives us information that is already contained in the first two variables. However, a sparse autoencoder does not seem to a fruitful model of the data. There is a high negative correlation with the second MCA dimension:</p>
 <pre class="r"><code>cor(processed_data[, c(&quot;SpAEdim1&quot;,&quot;SpAEdim2&quot;,&quot;SpAEdim3&quot;,&quot;MCAdim1&quot;,&quot;MCAdim2&quot;,&quot;MCAdim3&quot;)], method = &quot;kendall&quot;)</code></pre>
-<pre><code>##             SpAEdim1     SpAEdim2   SpAEdim3     MCAdim1      MCAdim2
-## SpAEdim1  1.00000000  0.010335203  0.2009660 -0.70120325  0.032323867
-## SpAEdim2  0.01033520  1.000000000 -0.1533813  0.23632878  0.007116739
-## SpAEdim3  0.20096596 -0.153381264  1.0000000 -0.23349109 -0.578871952
-## MCAdim1  -0.70120325  0.236328784 -0.2334911  1.00000000  0.022825545
-## MCAdim2   0.03232387  0.007116739 -0.5788720  0.02282555  1.000000000
-## MCAdim3  -0.11878520 -0.175797551 -0.3695507  0.05704291 -0.017527646
+<pre><code>##             SpAEdim1    SpAEdim2    SpAEdim3     MCAdim1     MCAdim2
+## SpAEdim1  1.00000000 -0.04212537 -0.04524394  0.18604904 -0.57429800
+## SpAEdim2 -0.04212537  1.00000000 -0.36051561 -0.62570317  0.01800062
+## SpAEdim3 -0.04524394 -0.36051561  1.00000000  0.10595641 -0.31601060
+## MCAdim1   0.18604904 -0.62570317  0.10595641  1.00000000  0.02282555
+## MCAdim2  -0.57429800  0.01800062 -0.31601060  0.02282555  1.00000000
+## MCAdim3  -0.26504374 -0.16943424  0.36581402  0.05704291 -0.01752765
 ##              MCAdim3
-## SpAEdim1 -0.11878520
-## SpAEdim2 -0.17579755
-## SpAEdim3 -0.36955071
+## SpAEdim1 -0.26504374
+## SpAEdim2 -0.16943424
+## SpAEdim3  0.36581402
 ## MCAdim1   0.05704291
 ## MCAdim2  -0.01752765
 ## MCAdim3   1.00000000</code></pre>
+<p>Finally, there is the function in the script to build a recurrent autoencoder, called <code>build_recurrent_autoencoder(data)</code>. This function relies on the input data being grouped by global.id and being sorted descendingly by timestamp for each global.id. This is how <code>processAllObservation()</code> currently gives out the data and none of the functions used above changes this ordering. The functions returns a recurrent autoencoder model with one hidden layer containing 3 units. This currently cannot be adapted.</p>
+<p>The (theoretical) advantage of a recurrent autoencoder is that unlike the other two types presented before, it respects the ordering in which the observations occurred.</p>
+<p>However, we can see that in practise the recurrent autoencoder performs significantly worse that the normal autoencoder when it comes to predicting the observer variables. We must therefore also assume that it is a worse model to compress the observation values</p>
+<pre class="r"><code>model_recurrent &lt;- build_recurrent_autoencoder(training_and_test)
+processed_data &lt;- insert_ae_units(processed_data, model_recurrent, name = &quot;Rec&quot;)
+
+validation &lt;- get_predictions(validation, model_recurrent, type = &quot;Rec&quot;)
+
+mean(validation$RecAEError)</code></pre>
+<pre><code>## [1] 1.344097</code></pre>
 </div>
 <div id="loading-questionnaires" class="section level2">
 <h2>Loading Questionnaires</h2>
@@ -728,19 +742,19 @@ processed_data &lt;- insert_ae_units(processed_data, model, name = &quot;Sp&quot
 ## 12   external Group2  0.346364347 2.357262e-03  0.34862745</code></pre>
 <pre class="r"><code>df &lt;- normalise(processed_data, c(&quot;MCAdim1&quot;,&quot;MCAdim2&quot;,&quot;MCAdim3&quot;,&quot;AEdim1&quot;,&quot;AEdim2&quot;,&quot;AEdim3&quot;))
 test_cont_vars_for_observers(df, c(&quot;MCAdim1&quot;,&quot;MCAdim2&quot;,&quot;MCAdim3&quot;,&quot;AEdim1&quot;,&quot;AEdim2&quot;,&quot;AEdim3&quot;))</code></pre>
-<pre><code>##        var  group       alpha
-## 1  MCAdim1 Group1  0.39801216
-## 2     &lt;NA&gt; Group2  0.39841084
-## 3  MCAdim2 Group1  0.46231389
-## 4     &lt;NA&gt; Group2  0.53486139
-## 5  MCAdim3 Group1  0.26813631
-## 6     &lt;NA&gt; Group2  0.19206467
-## 7   AEdim1 Group1  0.27592043
-## 8     &lt;NA&gt; Group2  0.27085077
-## 9   AEdim2 Group1  0.49988248
-## 10    &lt;NA&gt; Group2  0.47608529
-## 11  AEdim3 Group1  0.17872767
-## 12    &lt;NA&gt; Group2 -0.02901641</code></pre>
+<pre><code>##        var  group     alpha
+## 1  MCAdim1 Group1 0.3980122
+## 2     &lt;NA&gt; Group2 0.3984108
+## 3  MCAdim2 Group1 0.4623139
+## 4     &lt;NA&gt; Group2 0.5348614
+## 5  MCAdim3 Group1 0.2681363
+## 6     &lt;NA&gt; Group2 0.1920647
+## 7   AEdim1 Group1 0.4620941
+## 8     &lt;NA&gt; Group2 0.4033286
+## 9   AEdim2 Group1 0.3854831
+## 10    &lt;NA&gt; Group2 0.2815532
+## 11  AEdim3 Group1 0.1551862
+## 12    &lt;NA&gt; Group2 0.1717462</code></pre>
 </div>
 <div id="process-mining" class="section level2">
 <h2>Process Mining</h2>

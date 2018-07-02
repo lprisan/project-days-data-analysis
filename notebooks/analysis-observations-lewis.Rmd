@@ -331,9 +331,9 @@ validation <- processed_data %>% filter(row_number() > nrow(processed_data)*0.75
 
 model <- build_autoencoder(training_and_test)
 
-predictions <- get_predictions(validation, model)
+validation <- get_predictions(validation, model)
 
-summary(predictions$AEerr)
+summary(validation$AEerr)
 ```
 
 We can build a sparse autoencoder using the function `build_sparse_autoencoder(data, units = 3)`
@@ -361,12 +361,21 @@ A slightly better fit is given by a sparse autoencoder with three units. Here, t
 and the correlation with the MCA dimensions are stronger.
 
 ```{r, include = F}
-model <- build_sparse_autoencoder(processed_data)
-processed_data <- insert_ae_units(processed_data, model, name = "Sp")
+model_sparse <- build_sparse_autoencoder(training_and_test)
+processed_data <- insert_ae_units(processed_data, model_sparse, name = "Sp")
+
+validation <- get_predictions(validation, model_sparse, type = "Sp")
+
+mean(validation$SpAEError)
 ```
 ```{r, eval = F}
-model <- build_sparse_autoencoder(processed_data)
-processed_data <- insert_ae_units(processed_data, model, name = "Sp")
+model_sparse <- build_sparse_autoencoder(training_and_test)
+processed_data <- insert_ae_units(processed_data, model_sparse, name = "Sp")
+
+validation <- get_predictions(validation, model_sparse, type = "Sp")
+```
+```{r}
+mean(validation$SpAEError)
 ```
 
 Visual inspection of comments and observer values shows that low values in the first sparse AE dimension
@@ -382,6 +391,28 @@ is a high negative correlation with the second MCA dimension:
 
 ```{r}
 cor(processed_data[, c("SpAEdim1","SpAEdim2","SpAEdim3","MCAdim1","MCAdim2","MCAdim3")], method = "kendall")
+```
+
+Finally, there is the function in the script to build a recurrent autoencoder, called
+`build_recurrent_autoencoder(data)`. This function relies on the input data being grouped by global.id
+and being sorted descendingly by timestamp for each global.id. This is how `processAllObservation()` currently
+gives out the data and none of the functions used above changes this ordering. The functions returns
+a recurrent autoencoder model with one hidden layer containing 3 units. This currently cannot be adapted.
+
+The (theoretical) advantage of a recurrent autoencoder is that unlike the other two types presented before,
+it respects the ordering in which the observations occurred.
+
+However, we can see that in practise the recurrent autoencoder performs significantly worse that the normal autoencoder
+when it comes to predicting the observer variables. We must therefore also assume that it is a worse model
+to compress the observation values
+
+```{r}
+model_recurrent <- build_recurrent_autoencoder(training_and_test)
+processed_data <- insert_ae_units(processed_data, model_recurrent, name = "Rec")
+
+validation <- get_predictions(validation, model_recurrent, type = "Rec")
+
+mean(validation$RecAEError)
 ```
 
 ## Loading Questionnaires

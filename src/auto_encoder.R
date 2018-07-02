@@ -6,6 +6,7 @@ library(ggplot2)
 library(ggridges)
 library(cloudml)
 library(Metrics)
+library(pracma)
 
 
 #Mainly based on https://www.r-bloggers.com/deep-learning-in-r-2/
@@ -66,17 +67,60 @@ build_autoencoder <- function(data){
 
 
 ### Extracts predictions 
-get_predictions <- function(data, model){
-  eval_data <- as.matrix(data[,c("disengaged", "looking", "talking", "technology", "resources", "external")])
+get_predictions <- function(data, model, type = ""){
+  if(strcmp(type, "Rec")){
+    students <- unique(data$global.id)
+    last <- 0
+    
+    data$`1` <- NA
+    data$`2` <- NA
+    data$`3` <- NA
+    data$`4` <- NA
+    data$`5` <- NA
+    data$`6` <- NA
+    
+    for(i in 1:length(students)){
+      batch <- data %>% dplyr::filter(global.id == students[[i]]) %>%
+                        dplyr::select(disengaged, looking, talking, technology, resources, external)
+      rows <- nrow(batch)
+      
+      batch <- as.matrix(batch)
+      batch <- replicate(1, batch, simplify = "array")
+      batch <- aperm(batch, c(3,1,2))
+      
+      new_columns <- predict(model, batch)
+      
+      for(j in 1:rows){
+        data$`1`[j + last] <- round(new_columns[1, j, 1])
+        data$`2`[j + last] <- round(new_columns[1, j, 2])
+        data$`3`[j + last] <- round(new_columns[1, j, 3])
+        data$`4`[j + last] <- round(new_columns[1, j, 4])
+        data$`5`[j + last] <- round(new_columns[1, j, 5])
+        data$`6`[j + last] <- round(new_columns[1, j, 6])
+      }
+      
+      last <- last + rows
+    }
+    
+    data$RecAEError <- abs(data$disengaged-data$`1`) + abs(data$looking-data$`2`) + abs(data$talking-data$`3`) +
+      abs(data$technology-data$`4`) + abs(data$resources-data$`5`) + abs(data$external-data$`6`)
+  }
+  else{
+    eval_data <- as.matrix(data[,c("disengaged", "looking", "talking", "technology", "resources", "external")])
+    
+    pred_train <- predict(model, eval_data)
+    
+    pred_train <- round(pred_train)
+    
+    data <- cbind(data, pred_train)
+    
+    data$error <- abs(data$disengaged-data$`1`) + abs(data$looking-data$`2`) + abs(data$talking-data$`3`) +
+      abs(data$technology-data$`4`) + abs(data$resources-data$`5`) + abs(data$external-data$`6`)
+    
+    names(data)[length(names(data))] <- paste(type, "AEError", sep = "")
+  }
   
-  pred_train <- predict(model, eval_data)
-  
-  pred_train <- round(pred_train)
-  
-  data <- cbind(data, pred_train)
-  
-  data$AEerror <- abs(data$disengaged-data$`1`) + abs(data$looking-data$`2`) + abs(data$talking-data$`3`) +
-                    abs(data$technology-data$`4`) + abs(data$resources-data$`5`) + abs(data$external-data$`6`)
+  data <- data[, c(1:(ncol(data)-7), ncol(data))]
   
   data
 }
@@ -151,10 +195,10 @@ build_recurrent_autoencoder <- function(data){
   
   model <- keras_model_sequential()
   invisible(model <- model %>%
-              layer_lstm(units = 3, return_sequences = TRUE, input_shape = c(NULL, 6)) %>%
-              layer_lstm(3, return_sequences = TRUE) %>%
+              layer_lstm(units = 3, return_sequences = T, input_shape = list(NULL, 6)) %>%
+              #layer_lstm(3, return_sequences = T) %>%
               #layer_dropout(rate = 0.5) %>%
-              time_distributed(layer_dense(2, activation = "sigmoid"))
+              time_distributed(layer_dense(units = 6, activation = "sigmoid"))
             )
                                
   
@@ -176,13 +220,17 @@ build_recurrent_autoencoder <- function(data){
     batch <- data %>% dplyr::filter(global.id == students[[i]]) %>%
                       dplyr::select(disengaged, looking, talking, technology, resources, external)
     
-    batch %<>% normalization_minmax(get_desc(batch)) %>% as.matrix()
+    #batch %<>% normalization_minmax(get_desc(batch)) %>% as.matrix()
+    batch <- as.matrix(batch)
+    batch <- replicate(1, batch, simplify = "array")
+    batch <- aperm(batch, c(3,1,2))
     
     model %>% fit(
-      batch, 
+      x = batch,
+      y = batch,
       epochs = 50,
       verbose = 0,
-      batch_size = nrow(batch),
+      #batch_size = nrow(batch),
       callbacks = list(checkpoint, early_stopping)
     )
   }
@@ -211,17 +259,59 @@ extract_hidden_layer <- function(data, model){
   intermediate_output
 }
 
+extract_recurrent_hidden_layer <- function(data, model){
+  data <- data %>%
+    dplyr::select(disengaged, looking, talking, technology, resources, external) %>%
+    as.matrix()
+  
+  data <- replicate(1, data, simplify = "array")
+  data <- aperm(data, c(3,1,2))
+  
+  layer <- model$layers[[1]]
+  intermediate_layer_model <- keras_model(inputs = model$input,
+                                          outputs = layer$output)
+  
+  intermediate_output <- predict(intermediate_layer_model, data)
+  
+  intermediate_output
+}
+
 
 insert_ae_units <- function(data, model, name = ""){
-  new_columns <- extract_hidden_layer(data, model)
-  new_columns <- data.frame(new_columns)
+  if(strcmp(name, "Rec")){
+    data$RecAEdim1 <- NA
+    data$RecAEdim2 <- NA
+    data$RecAEdim3 <- NA
+    
+    students <- unique(data$global.id)
+    last <- 0
+    
+    for(i in 1:length(students)){
+      batch <- data %>% dplyr::filter(global.id == students[[i]])
+      
+      new_columns <- extract_recurrent_hidden_layer(batch, model)
+
+      for(j in 1:nrow(batch)){
+        data$RecAEdim1[j + last] <- new_columns[1, j, 1]
+        data$RecAEdim2[j + last] <- new_columns[1, j, 2]
+        data$RecAEdim3[j + last] <- new_columns[1, j, 3]
+      }
+      
+      last <- last + nrow(batch)
+    }
+  }
+  else{
+    new_columns <- extract_hidden_layer(data, model)
+    new_columns <- data.frame(new_columns)
+    
+    
+    for(i in 1:ncol(new_columns)){
+      names(new_columns)[i] <-  paste(c(name, "AEdim", i), collapse = "")
+    }
   
-  
-  for(i in 1:ncol(new_columns)){
-    names(new_columns)[i] <-  paste(c(name, "AEdim", i), collapse = "")
+    data <- data.frame(data, new_columns)
   }
   
-  data <- data.frame(data, new_columns)
   data
 }
 
@@ -269,3 +359,5 @@ create_uniform_timeseries <- function(data){
   
   new_data_frame
 }
+
+#get_student_frequencies()
