@@ -533,3 +533,31 @@ transitions <- visualise_process_maps(pm_data, plot = T)
 This confirms what we we have analysed before: The third state is by far the most common and transitions between
 distinct states are rather rare.
 
+
+## Anomaly Detection
+
+The script `anomaly_testing.R` contains functions to perform anomaly detection on our observation variables.
+The function `isolation_forest_per_student(data, threshold = 0.95, plot = T, normalise = T)` uses the machine
+learning techniques to detect students with anomal observation data. The function first (optionally) normalises
+the observation values within one project day and then aggregates (and averages) the data. The function
+then returns a data frame containing students, their aggregated observation data, as well as an anomaly score and an
+anomaly indicator. The threshold for the latter can be set by an input parameter of the function
+(the input value represents the proportion of students that are normal).
+Optionally, one can include explantory plots.
+
+The function `isolation_forest_per_student(data, threshold = 0.95, plot = T, normalise = T)` does exactly the same
+except that it aggregates per group rather than per student. It is important to note that anomaly might be
+something desirable in this context. I.e., not only underperfoming, but also very well performing students get flaged.
+A high anomaly score only indicates that the observation values of a student (or group) are extreme in relation
+to the other scores. Furthermore, this model (currently) only detects extreme values in retrospect and is not able
+to flag single given inputs as anomal or normal. An exhibit of the effect of the function can be found here:
+
+```{r, include = F}
+source("../src/anomaly_detection.R")
+```
+```{r anomaly_detection}
+if_data <- isolation_forest_per_student(processed_data)
+
+dplyr::filter(if_data, is_anomaly)
+```
+
