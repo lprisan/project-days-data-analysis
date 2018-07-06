@@ -9,6 +9,8 @@ library(dplyr)
 ## Devtools must be installed prior to this but is not required to run this script
 library(AnomalyDetection)
 library(IsolationForest)
+library(anomalize)
+library(tibbletime)
 
 
 ### This script is mainly based on https://www.r-bloggers.com/anomaly-detection-for-business-metrics-with-r/
@@ -31,10 +33,7 @@ isolation_forest_per_student <- function(data, threshold = 0.95, plot = T, norma
     # select the metrics
     dplyr::select(global.id, disengaged, looking, talking, technology, resources, external
            ) #%>%
-    # casting
-    #dcast(., timestamp ~ disengaged + looking + talking + technology + resources + external, value.var = 'sessions') %>%
-    # remove total values
-    #select(-total)
+    
   df_ses_if[is.na(df_ses_if)] <- 0
   
   # creating trees
@@ -102,10 +101,7 @@ isolation_forest_per_group <- function(data, threshold = 0.95, plot = T, normali
     # select the metrics
     dplyr::select(global.group, disengaged, looking, talking, technology, resources, external
     ) #%>%
-  # casting
-  #dcast(., timestamp ~ disengaged + looking + talking + technology + resources + external, value.var = 'sessions') %>%
-  # remove total values
-  #select(-total)
+ 
   df_ses_if[is.na(df_ses_if)] <- 0
   
   # creating trees
@@ -156,22 +152,37 @@ isolation_forest_per_group <- function(data, threshold = 0.95, plot = T, normali
 
 #### Curently doesn't work!!!!
 timeseries_anomaly <- function(data, column){
+  periods <- c()
+  counter <- 1
 
-  df_ts <- data %>%
-    mutate(timestamp = as.POSIXct(timestamp, format = "%d/%m/%Y %H:%M:%S"))
+  for(i in 2:nrow(data)){
+    if(as.POSIXct(data$timestamp[i - 1], format = "%d/%m/%Y %H:%M:%S") <= 
+              as.POSIXct(data$timestamp[i], format = "%d/%m/%Y %H:%M:%S")){
+      counter <- counter + 1
+    }
+    else{
+      periods <- c(periods, counter)
+      counter <- 1
+    }
+  }
   
-  #df_ts_ses <- df_ts %>%
-  #  dcast(., date ~ channel, value.var = 'sessions')
-  df_ts <- df_ts %>%
-    dcast(., timestamp ~ disengaged, value.var = 'student')
-  df_ts[is.na(df_ts)] <- 0
+  periods <- c(periods, counter)
   
   # example with Direct channel
-  AnomalyDetectionTs(df_ts[, c(1,3)],
-                     max_anoms = 0.05, direction = 'both', e_value = TRUE, plot = TRUE) # 5% of anomalies
-  AnomalyDetectionTs(df_ts[, c(1,3)],
-                     max_anoms = 0.1, direction = 'both', e_value = TRUE, plot = TRUE) # 10% of anomalies
+  AnomalyDetectionVec(data[, column],
+                     max_anoms = 0.05, direction = 'both', e_value = TRUE, plot = TRUE, period = periods)
+  # 5% of anomalies
+  ret <- AnomalyDetectionVec(data[, column],
+                     max_anoms = 0.1, direction = 'both', e_value = TRUE, plot = TRUE, period = periods)
+  # 10% of anomalies
+  
+  # for(i in 1:nrow(ret)){
+  #   print(data[])
+  # }
+  
+  ret
 }
+
 
 
 
@@ -208,4 +219,34 @@ normalise_per_day <- function(data){
 }
 
 
+detect_anomaly_for_student <- function(data, id, column = "MCAdim1"){
+  data <- dplyr::filter(data, global.id == id)
+  
+  Sys.setenv(TZ = "America/New_York")
+  data$timestamp <- as.POSIXct(strptime(data$timestamp, format = "%d/%m/%Y %H:%M:%S"))
+  
+  data <- as_tbl_time(data, index = timestamp)
+  
+  data %>% time_decompose(column) %>% anomalize(remainder) %>% time_recompose() %>%
+    plot_anomalies(time_recompose = T)
+}
+
+detect_anomaly_for_group <- function(data, day, grp, column = "MCAdim1"){
+  data <- dplyr::filter(data, group == grp)
+  
+  data <- dplyr::filter(data, date == day)
+  
+  data %<>% dplyr::group_by(timestamp) %>% dplyr::summarize(MCAdim1 = mean(MCAdim1), MCAdim2 = mean(MCAdim2),
+              MCAdim3 = mean(MCAdim3), disengaged = mean(disengaged), looking = mean(looking),
+              talking = mean(talking), technology = mean(technology), resources = mean(resources),
+              external = mean(external)) %>% dplyr::ungroup()
+  
+  Sys.setenv(TZ = "America/New_York")
+  data$timestamp <- as.POSIXct(strptime(data$timestamp, format = "%d/%m/%Y %H:%M:%S"))
+  
+  data <- as_tbl_time(data, index = timestamp)
+  
+  data %>% time_decompose(column) %>% anomalize(remainder) %>% time_recompose() %>%
+    plot_anomalies(time_recompose = T)
+}
 

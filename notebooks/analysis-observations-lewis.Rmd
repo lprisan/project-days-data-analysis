@@ -561,3 +561,20 @@ if_data <- isolation_forest_per_student(processed_data)
 dplyr::filter(if_data, is_anomaly)
 ```
 
+A different approach is given by the functions `detect_anomaly_for_student(data, id, column = "MCAdim1")` and
+`detect_anomaly_for_group(data, day, grp, column = "MCAdim1")`. They both follow a so-called model approach.
+The advantages of the model approach is that it takes the timeseries character of the observations into account
+and that it only needs the data of one student or group at a time. Hence, one does not require a big data set
+(just the MCA dimensions in the case exhibited below) and the analysis can be performed without having collected
+a huge dataset. The latter can also be interpreted as a disadvantage however, as this means that model approach
+does not consider as much data and the anomalies are only relative to a student or group itself.
+
+The first function of the two takes in a dataframe, a (global) id of a student and optionally a column.
+The second function has a day and a group instead of an id as an input. Both return a plot.
+
+```{r model_approach}
+detect_anomaly_for_student(processed_data, "2017-10-11 Group 2 Student E")
+
+detect_anomaly_for_group(processed_data, "2017-10-11", "Group 2")
+```
+
