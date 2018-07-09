@@ -219,6 +219,9 @@ normalise_per_day <- function(data){
 }
 
 
+
+## Takes in dataframe, (global) student id and optionally a column to analyse.
+## Returns a plot
 detect_anomaly_for_student <- function(data, id, column = "MCAdim1"){
   data <- dplyr::filter(data, global.id == id)
   
@@ -231,6 +234,9 @@ detect_anomaly_for_student <- function(data, id, column = "MCAdim1"){
     plot_anomalies(time_recompose = T)
 }
 
+## Takes in dataframe, a date, a group and optionally a column to analyse.
+## Currently the column can just be an MCA dimenion or observer variable
+## Returns a plot
 detect_anomaly_for_group <- function(data, day, grp, column = "MCAdim1"){
   data <- dplyr::filter(data, group == grp)
   
