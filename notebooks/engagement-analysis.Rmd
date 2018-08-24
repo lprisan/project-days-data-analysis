@@ -1,0 +1,188 @@
+---
+title: "Analyzing project days' engagement v2"
+output: html_notebook
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(gsheet)
+library(knitr)
+library(dplyr)
+library(magrittr)
+library("PerformanceAnalytics")
+library(Hmisc)
+
+source("../src/processObservationData.R")
+source("../src/mca.R")
+source("../src/hmm.R")
+source("../src/lda.R")
+source("../src/auto_encoder.R")
+source("../src/questionnaires.R")
+```
+
+We import the observation and questionnaire data...
+
+```{r, import, warning=FALSE, message=FALSE, echo=FALSE}
+
+obsdata <- processAllObservationData()
+actdata <- load_all_intermediate_questionnaires()
+findata <- load_all_final_questionnaires()
+
+```
+
+Initial explorations of observation data:
+
+```{r}
+
+obsdata %>% dplyr::select(date, project, disengaged:external) %>% 
+  aggregate(.~date+project,data=., mean) %>%
+  dplyr::mutate(date=as.factor(date)) %>%
+  melt(id.vars=c("date","project")) %>%
+  ggplot(aes(date, value)) + 
+  geom_bar(aes(fill=variable), position = "dodge", stat = "identity") + theme_minimal()
+
+
+obsdata %>% dplyr::select(project, disengaged:external) %>% aggregate(.~project,data=., mean) %>%
+  melt(id.vars="project") %>%
+  ggplot(aes(project, value)) + 
+  geom_bar(aes(fill=variable), position = "dodge", stat = "identity") + theme_minimal()
+
+```
+
+*One thing to note: on the 2017-10-11 event, the observation of technology and resources was conflated into a single observer tick -- the current preprocessing assumes that the tick means "engaged with technology AND resources" (and the absence of tick, not engaged with either technology or resources)*
+
+We can see that different dates have quite different engagement profiles, and the same can be said for the aggregation of every kind of project day: e.g., in Keha there was more use of technology and resources, while in Linnaruum there was more talking. However, this is not so easy to interpret, especially for a teacher concerned by the question: "are my students engaged?"
+
+A potential way of answering this with MCA analysis:
+
+```{r}
+
+mca <- mca_analysis(obsdata, plots = T)
+#  fviz_ellipses(mca, "disengaged", geom = "point")
+obsdata <- add_mca_dimensions(obsdata, mca = mca, dimensions = 3)
+
+obsdata <- obsdata %>% mutate(MCA.Active.Eng = -MCAdim1) %>%
+   mutate(MCA.Passive.Eng = -MCAdim2) %>%
+   mutate(MCA.Conf.Help = MCAdim3)
+
+```
+
+* MCADim1 explains most (25%) of the variance, and it seems very correlated with disengagement behavior (and somewhat with more passive forms of engagement like looking), and viceversa: negative values are related with the other, more active kinds of engagement (external, resources, technology, talking). We can interpret --MCADim1 as **"Active engagement"**. 
+* --MCADim2 could be related with some kind of **"Passive engagement"** (introspection?), since it is quite correlated with looking and talking (but not use of external, techology, or disengagement). 
+* MCADim3 is related with external and looking, maybe in the sense of **"confusion and help-seeking"**? (but this is maybe a stretch)
+
+
+With these interpretations, we can now get the profile of each day, each project, and each student or group:
+
+```{r}
+obsdata %>% dplyr::select(date, project, MCA.Active.Eng:MCA.Conf.Help) %>% 
+  aggregate(.~date+project,data=., mean) %>%
+  dplyr::mutate(date=as.factor(date)) %>%
+  melt(id.vars=c("date","project")) %>%
+  ggplot(aes(date, value)) + 
+  geom_bar(aes(fill=variable), position = "dodge", stat = "identity") + theme_minimal()
+
+
+obsdata %>% dplyr::select(project, MCA.Active.Eng:MCA.Conf.Help) %>% aggregate(.~project,data=., mean) %>%
+  melt(id.vars="project") %>%
+  ggplot(aes(project, value)) + 
+  geom_bar(aes(fill=variable), position = "dodge", stat = "identity") + theme_minimal()
+
+obsdata %>% dplyr::select(global.id, MCA.Active.Eng:MCA.Conf.Help) %>% aggregate(.~global.id,data=., mean) %>%
+  melt(id.vars="global.id") %>%
+  filter(global.id=="2017-08-11 Group 1 Student C" | global.id=="2017-08-11 Group 3 Student A") %>%
+  ggplot(aes(global.id, value)) +
+  geom_bar(aes(fill=variable), position = "dodge", stat = "identity") + theme_minimal()
+
+obsdata %>% mutate(global.group.id=paste(date,group)) %>%
+  dplyr::select(global.group.id, MCA.Active.Eng:MCA.Conf.Help) %>% aggregate(.~global.group.id,data=., mean) %>%
+  melt(id.vars="global.group.id") %>%
+  filter(global.group.id=="2017-08-11 Group 1" | global.group.id=="2017-08-11 Group 3") %>%
+  ggplot(aes(global.group.id, value)) +
+  geom_bar(aes(fill=variable), position = "dodge", stat = "identity") + theme_minimal()
+
+```
+
+... and we can also see the evolution of these variables over time, globally, per student and per group
+
+```{r}
+
+obsdata %>% dplyr::mutate(time=as.POSIXct(timestamp, tz="Europe/Tallinn", "%d/%m/%Y %H:%M:%S")) %>%
+  dplyr::mutate(date=paste0(date," (",project,")")) %>%
+  dplyr::select(time, date, project, MCA.Active.Eng:MCA.Conf.Help) %>% 
+  melt(id.vars=c("time", "date","project")) %>%
+  ggplot(aes(time, value, color=variable)) + 
+  #geom_line(aes(color=variable)) + geom_point(aes(shape=project, color=variable)) + 
+  geom_smooth(aes(color=variable), se = F, span=0.2) +
+  facet_wrap(~date, scales = "free_x") + theme_minimal()
+
+obsdata %>% dplyr::mutate(time=as.POSIXct(timestamp, tz="Europe/Tallinn", "%d/%m/%Y %H:%M:%S")) %>%
+  dplyr::select(global.id, time, MCA.Active.Eng:MCA.Conf.Help) %>% 
+  melt(id.vars=c("global.id","time")) %>%
+  filter(global.id=="2017-08-11 Group 1 Student C" | global.id=="2017-08-11 Group 3 Student A") %>%
+  ggplot(aes(time, value, color=variable)) + 
+  #geom_line(aes(color=variable)) + geom_point(aes(shape=project, color=variable)) + 
+  geom_smooth(aes(color=variable), se = F, span=0.2) + geom_rug(sides="b") +
+  facet_wrap(~global.id, scales = "free_x") + theme_minimal()
+
+obsdata %>% mutate(global.group.id=paste(date,group)) %>%
+  dplyr::mutate(time=as.POSIXct(timestamp, tz="Europe/Tallinn", "%d/%m/%Y %H:%M:%S")) %>%
+  dplyr::select(global.group.id, time, MCA.Active.Eng:MCA.Conf.Help) %>% 
+  aggregate(.~time+global.group.id,data=., mean) %>%
+  melt(id.vars=c("global.group.id","time")) %>%
+  filter(global.group.id=="2017-08-11 Group 1" | global.group.id=="2017-08-11 Group 3") %>%
+  ggplot(aes(time, value, color=variable)) + 
+  #geom_line(aes(color=variable)) + geom_point(aes(shape=project, color=variable)) + 
+  geom_smooth(aes(color=variable), se = F, span=0.2) + geom_rug(sides="b") +
+  facet_wrap(~global.group.id, scales = "free_x") + theme_minimal()
+
+
+```
+
+If we now compare these MCA dimensions of engagement with the responses to the final questionnaire (difficulty --actually, ease; and satisfaction):
+
+```{r, eval=F}
+
+obtotal <- obsdata %>% dplyr::select(global.id, disengaged:external, MCA.Active.Eng:MCA.Conf.Help) %>% aggregate(.~global.id,data=., mean)
+
+merged <- merge(obtotal,findata, by="global.id") %>% dplyr::select(global.id, disengaged:external, MCA.Active.Eng:MCA.Conf.Help, satisfaction, difficulty)
+
+merged %>% dplyr::select(-global.id) %>% chart.Correlation(histogram=TRUE, pch=19)
+```
+
+The only interesting correlations are ease-confusion.help (confirms a bit the interpretation) and ease-looking (if it is easy, they don't look, just act?)
+
+Do these dimensions (or the autoencoder) take away some of the observer noise (in IRR)? Apparently not
+
+## Adding the HMM and auto-encoder variables
+
+```{r}
+#create_hmm_states_global(obsdata, visualise = TRUE, max_states = 6)
+obsdata <- insert_hmm(obsdata)
+
+training_and_test <- obsdata %>% filter(row_number() <= nrow(obsdata)*0.75)
+validation <- obsdata %>% filter(row_number() > nrow(obsdata)*0.75)
+
+model <- build_autoencoder(training_and_test)
+
+predictions <- get_predictions(validation, model)
+
+summary(predictions$AEerr)
+obsdata <- insert_ae_units(obsdata, model)
+
+```
+
+## Comparing with activity-level questionnaires
+
+```{r}
+# See https://rstudio-pubs-static.s3.amazonaws.com/240657_5157ff98e8204c358b2118fa69162e18.html for multiple correlations tests
+
+
+matched_data <- match_with_data(obsdata, iq=actdata, fq=findata)
+agg_data <- merge_and_aggregate(matched_data, actdata, findata)
+
+agg_data %>% dplyr::select(disengaged:external, MCAdim1:AEdim3, contribution:collaboration,f_satisfaction,ease) %>% as.matrix() %>% rcorr(type = c("pearson","spearman")) %>% kable()
+
+```

@@ -4,6 +4,12 @@ library(factoextra)
 library(magrittr)
 library(dplyr)
 
+
+# Mainly based on:
+# http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/
+
+
+### creates a mca model for a given dataset, optionally with explanatory plots
 mca_analysis <- function(data, plots = T){
   mca_data <- data[,c("disengaged","looking","talking","technology","resources","external")]
   
@@ -22,21 +28,25 @@ mca_analysis <- function(data, plots = T){
     print(fviz_screeplot(mca1, addlabels = TRUE, ylim = c(0, 45)))
   
     print(fviz_mca_var(mca1, col.var="orange", shape.var = 15, repel = TRUE))
-  
-    print(fviz_mca_var(mca1, choice = "mca.cor", 
-                  repel = F, # Avoid text overlapping (slow)
-                  ggtheme = theme_minimal()))
-  
-    factors <- c("disengaged","looking","talking","technology","resources","external")
-  
-    for (column in factors) {
-      print(fviz_ellipses(mca1, column, geom = "point"))
-    }
+
+    print(fviz_mca_var(mca1, axes=c(1,3), col.var="red", shape.var = 15, repel = TRUE))
+    
+    # print(fviz_mca_var(mca1, choice = "mca.cor", 
+    #               repel = F, # Avoid text overlapping (slow)
+    #               ggtheme = theme_minimal()))
+    # 
+    # factors <- c("disengaged","looking","talking","technology","resources","external")
+    # 
+    # for (column in factors) {
+    #   print(fviz_ellipses(mca1, column, geom = "point"))
+    # }
   }
   
   mca1
 }
 
+
+### inserts an mca model (dimension columns) into dataframe. model can be created manually before for inspection
 add_mca_dimensions <- function(dataframe, mca = NULL, dimensions = 3){
   
   #MCA can be passed manually if one wants to inspect the MCA output first. Otherwise created here.
@@ -44,7 +54,7 @@ add_mca_dimensions <- function(dataframe, mca = NULL, dimensions = 3){
   
   #Gets the extra columns from the MCA object and merges with original data
   extra_columns <- mca$ind$coord[,1:dimensions]
-  dataframe <- cbind(dataframe, extra_columns)
+  dataframe <- data.frame(dataframe, extra_columns)
   
   for(i in (ncol(dataframe)-dimensions+1):ncol(dataframe)){
     names(dataframe)[i] <- paste(c("MCAdim", (i+dimensions-ncol(dataframe))), collapse = "")
@@ -112,8 +122,8 @@ aggregate_by_groups <- function(dataframe){
   
   return_data <- dataframe %>%
     group_by(timestamp, group) %>%
-    summarize(MCAdim1 = sum(MCAdim1, na.rm = TRUE), MCAdim2 = sum(MCAdim2, na.rm = TRUE),
-              MCAdim3 = sum(MCAdim3, na.rm = TRUE), activity = first_element(activity),
+    summarize(MCAdim1 = mean(MCAdim1, na.rm = TRUE), MCAdim2 = mean(MCAdim2, na.rm = TRUE),
+              MCAdim3 = mean(MCAdim3, na.rm = TRUE), activity = first_element(activity),
               observer = first_element(observer), project = first_element(project),
               date = first_element(date), comments = first_element(comments))
   

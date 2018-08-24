@@ -1,12 +1,17 @@
 library(reshape2)
 library(gsheet)
 library(pracma)
+library(magrittr)
+library(dplyr)
+library(stringr)
 
+
+### brings dataset from one give gsheet into a clean format
 processObservationData <- function(data,
-                                   date=as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
-                                   project="Isle", 
+                                   date = as.POSIXct(strptime("10-01-2018", "%d-%m-%Y")),
                                    activitycol=F,
                                    observercol=F,
+                                   project = c("Isle"),
                                    namecols=c("timestamp","group",
                                               "StudentA","StudentB","StudentC",
                                               "StudentD")){
@@ -45,7 +50,8 @@ processObservationData <- function(data,
      student_obs <- melt(obs_data, id=c(1:3,ncol(obs_data)), measure=4:(ncol(obs_data)-1), na.rm=T)
      names(student_obs)[[5]]<-"student"
    }
-  }
+   }
+  student_obs$group <- str_replace(student_obs$group, "Team", "Group")
   
  student_obs$disengaged <- as.numeric(grepl(pattern = "disengaged", x = student_obs$value, fixed = TRUE))
  student_obs$looking <- as.numeric(grepl(pattern = "Looking", x = student_obs$value, fixed = TRUE))
@@ -54,7 +60,7 @@ processObservationData <- function(data,
  student_obs$resources <- as.numeric(grepl(pattern = "resources", x = student_obs$value, fixed = TRUE))
  student_obs$external <- as.numeric(grepl(pattern = "external", x = student_obs$value, fixed = TRUE))
  student_obs$student.id <- paste(student_obs$group,student_obs$student)
-
+ 
  if(observercol){
    if(!activitycol){
      student_obs <- student_obs[,c(1:5,7:ncol(student_obs))]
@@ -83,20 +89,22 @@ processObservationData <- function(data,
  
  student_obs$project <- project
  student_obs$date <- date
-
- student_obs$global.id <- paste(student_obs$project,student_obs$date,student_obs$student.id)
-
+ student_obs$date <- as.POSIXct(student_obs$date, format = "%d/%m/%Y")
+ 
+ student_obs$global.id <- paste(student_obs$date,student_obs$student.id)
+ 
  student_obs
 }
 
+
+### brings several gsheets into clean format and returns one dataframe
 processAllObservationData <- function(fileURLs = c("https://docs.google.com/spreadsheets/d/11BPHcSlqwozx3ffOQhQ5i5O8TRVa8xKoaw2uiny8k5A/edit",
                                                      "https://docs.google.com/spreadsheets/d/1kqSu52ZJo0y3cnhAe9fEsv9t7kUdRQ-2cKqSsziQk_M/edit",
                                                      "https://docs.google.com/spreadsheets/d/13Od5UuY5LLh2E5EPVD17IP6dO3x_xTpxyVYg9BQmIdE/edit",
                                                      "https://docs.google.com/spreadsheets/d/1hkkeSRYKKtlpxYAA4jEUddhkv-X5oj6gXzGPKobA5Wc/edit",
                                                      "https://docs.google.com/spreadsheets/d/1FSqm57ygxaIFa5V5oUCx7ht21ayuxMm7MO2IeczZ7ww/edit",
                                                      "https://docs.google.com/spreadsheets/d/1zcq0lGaavcxjdeEOgc6uNtMGAEy_NqXg4ufmnFaUjJo/edit",
-                                                     "https://docs.google.com/spreadsheets/d/1EoAfPj2hFcmlHo2ndfunLV4krkgJ2a69KlCi5NoYp0k/edit"),
-                                      projectNames = c("Linnaruum","Linnaruum","Isle","Isle","Isle","Keha","Keha")){
+                                                     "https://docs.google.com/spreadsheets/d/1EoAfPj2hFcmlHo2ndfunLV4krkgJ2a69KlCi5NoYp0k/edit")){
   
 
               
@@ -116,7 +124,11 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
     
     
     date_string <- raw_data[1,1]
-    sheet_date <- as.Date(date_string[1], format = "%d/%m/%Y")
+    sheet_date <- strsplit(date_string, " ")[[1]]
+    sheet_date <- sheet_date[1]
+    
+    project_name <- NA
+    project_name <- dplyr::filter(get_project_names(), dates == sheet_date)[1,2]
     
     activity <- F
     observer <- F
@@ -124,7 +136,7 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
     
     #Detects whether there are several activities listed on the Observersheet
     #Problem with encoding of .csv file on Mac: "In which" should be what works on windows 
-    if(grepl(pattern = "In which", x = raw_data_head[3], fixed = TRUE)){activity <- T}
+    if(grepl(pattern = "which", x = raw_data_head[3], fixed = TRUE)){activity <- T}
     if(grepl(pattern = "observer", x = raw_data_head[length(raw_data_head)], fixed = TRUE)){observer <- T}
     
     #Counts the number of students per group on the the Observersheet
@@ -152,12 +164,37 @@ processAllObservationData <- function(fileURLs = c("https://docs.google.com/spre
     if(observer){name_cols <- c(name_cols,"observer")}
     
     processed_data <- processObservationData(raw_data, date = sheet_date, namecols = name_cols,
-                                             activitycol = activity, observercol = observer,
-                                             project = projectNames[i])
+                                             activitycol = activity, observercol = observer, project = project_name)
     
-    complete_dataset <- rbind(complete_dataset, processed_data)
+    complete_dataset <- rbind.data.frame(complete_dataset, processed_data)
   }
   
   complete_dataset
+}
+
+aggregate_on_observations <- function(dataframe){
+  return_data <- dataframe %>%
+    group_by(timestamp, group) %>%
+    summarize(disengaged = sum(disengaged, na.rm = TRUE), looking = sum(looking, na.rm = TRUE),
+              talking = sum(talking, na.rm = TRUE), technology = sum(technology, na.rm = TRUE),
+              resources = sum(resources, na.rm = TRUE),
+              external = sum(external, na.rm = TRUE), activity = first_element(activity),
+              observer = first_element(observer), project = first_element(project),
+              date = first_element(date), comments = first_element(comments))
+  
+  
+   return_data
+}
+
+
+get_project_names <- function(){
+  dates <- c("11/10/2017", "22/11/2017", "06/12/2017", "13/12/2017", "10/01/2018", "18/10/2017", "08/11/2017")
+  names <- c("Linnarum", "Linnarum", "Ile Mysterieuse", "Ile Mysterieuse", "Ile Mysterieuse", "Keha", "Keha")
+  
+  #dates <- as.POSIXct(dates, format = "%d-%m-%Y")
+  
+  df <- data.frame(dates, names)
+  
+  df
 }
 
